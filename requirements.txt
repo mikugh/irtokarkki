@@ -1,0 +1,6 @@
+requests
+tabulate
+plyer
+pytest
+curl_cffi
+flask

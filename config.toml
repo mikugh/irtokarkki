@@ -1,0 +1,37 @@
+# Language for the command line output and notifications: "fi", "sv" or "en".
+# (The web UI has its own language switch.)
+language = "fi"
+
+[stores]
+# Stores in this city are checked for both chains.
+city = "Turku"
+max_stores_per_chain = 10
+
+[stores.s_group]   # Prisma, S-market, Sale, Alepa, ABC
+enabled = true
+# Optional: check only these stores instead of searching by city.
+# IDs are in the store URLs on s-kaupat.fi, e.g. "603212622" = S-market Halinen.
+store_ids = []
+
+[stores.k_group]   # K-Citymarket, K-Supermarket, K-Market
+enabled = true
+# Optional, e.g. ["N168"] = K-Citymarket Turku Skanssi (from k-ruoka.fi store URLs).
+store_ids = []
+
+[search]
+# Words searched in each store's product catalog.
+terms = ["irtokarkki", "irtokarkit", "irtomakeiset"]
+# A product's name must contain one of these to count (case-insensitive).
+# The stores' search is fuzzy and returns lots of unrelated candy, so this keeps
+# results to actual irtokarkki products. (Avoid just "irto": it also matches
+# e.g. "Irtokarvan poistaja", a pet-hair remover.) Add e.g. "makeissekoitus" or "karkkipussi"
+# to include candy bags, or set to [] to accept everything the search returns.
+name_keywords = ["irtokark", "irtomakeis", "irttari"]
+
+[notify]
+desktop = true
+# When you have favourite stores (star them in the web UI), only notify about deals in those.
+only_favourites = true
+# Phone notifications: install the ntfy app, subscribe to a hard-to-guess topic
+# name and put it here. Leave empty to disable.
+ntfy_topic = ""
