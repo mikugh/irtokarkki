@@ -28,9 +28,15 @@ terms = ["irtokarkki", "irtokarkit", "irtomakeiset"]
 # to include candy bags, or set to [] to accept everything the search returns.
 name_keywords = ["irtokark", "irtomakeis", "irttari"]
 
+[web]
+# The web UI caches each store's prices and shares them between everyone using it,
+# so the stores' sites aren't asked again for every visitor.
+cache_hours = 3            # prices older than this are fetched again
+min_refresh_minutes = 15   # "Check for deals" only refetches prices older than this
+
 [notify]
 desktop = true
-# When you have favourite stores (star them in the web UI), only notify about deals in those.
+# When you have favourite stores (in favourites.json, see the README), only notify about deals in those.
 only_favourites = true
 # Phone notifications: install the ntfy app, subscribe to a hard-to-guess topic
 # name and put it here. Leave empty to disable.

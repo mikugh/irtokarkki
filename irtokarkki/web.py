@@ -1,33 +1,154 @@
 """Web UI: lists stores with irtokarkki discounts and lets you favourite stores.
 
 Run with:  python -m irtokarkki.web   and open http://localhost:5000
+
+Several people can use it at once. Each visitor's city and favourite stores live in their
+own browser and are sent with every request. Prices are cached per store and shared by
+everyone, so a store is checked at most once per `cache_hours` however many people look at it.
 """
+import os
 import threading
+import time
 from dataclasses import asdict
 from datetime import datetime
 
 from flask import Flask, jsonify, request, send_from_directory
 
-from .core import collect, load_config, load_favourites, save_favourites, search_stores
+from .core import SOURCES, city_stores, fetch_prices, load_config, search_stores
 from .models import Deal, Store
 
 app = Flask(__name__, static_folder="static")
 config = load_config()
-
-_lock = threading.Lock()
-_state = {
-    "city": config["stores"]["city"],
-    "loading": False,
-    "rerun": False,  # a refresh was requested while one was already running
-    "updated_at": None,
-    "errors": [],
-    "stores": [],  # list[Store]
-    "deals": [],  # list[Deal]: current price of every irtokarkki product found, discounted or not
-}
+web_cfg = config.get("web", {})
+MAX_AGE = web_cfg.get("cache_hours", 3) * 3600  # prices older than this are fetched again
+REFRESH_AGE = web_cfg.get("min_refresh_minutes", 15) * 60  # "Check for deals" refetches prices older than this
+RETRY_AFTER = 10 * 60  # don't retry a store that failed for this long
+CITY_MAX_AGE = 24 * 3600  # which stores are in a city rarely changes
+MAX_FAVOURITES = 30
+STORE_FIELDS = ("chain", "store_id", "name", "location", "map_url", "source", "location_sv")
 
 
-def _store_json(store: Store, favourites: dict, checked: bool = False) -> dict:
-    return {**asdict(store), "key": store.key, "favourite": store.key in favourites, "checked": checked}
+class PriceCache:
+    """Each store's latest prices, shared by all visitors.
+
+    request() queues stores whose prices are missing or too old; a single background thread
+    fetches them one batch at a time, so the stores' sites see one polite client.
+    """
+
+    def __init__(self, fetch, clock=time.time, background: bool = True):
+        self._fetch = fetch  # list[Store] -> (deals, errors, failed source names)
+        self._clock = clock
+        self._background = background  # False: the caller runs run_once() itself (tests)
+        self._lock = threading.Lock()
+        self._wake = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._prices: dict[str, tuple[float, list[Deal]]] = {}  # store key -> (fetched at, prices)
+        self._queued: dict[str, Store] = {}  # waiting or being fetched
+        self._failed_at: dict[str, float] = {}  # store key -> last failure
+        self._errors: dict[str, tuple[float, str]] = {}  # source -> (when, message)
+        self._ok_at: dict[str, float] = {}  # source -> last successful fetch
+
+    def request(self, stores: list[Store], max_age: float = MAX_AGE) -> None:
+        now = self._clock()
+        with self._lock:
+            for store in stores:
+                fetched_at = self._prices.get(store.key, (None,))[0]
+                fresh = fetched_at is not None and now - fetched_at < max_age
+                failed_recently = now - self._failed_at.get(store.key, -RETRY_AFTER) < RETRY_AFTER
+                if not fresh and not failed_recently:
+                    self._queued.setdefault(store.key, store)
+            if self._background and self._queued and (self._thread is None or not self._thread.is_alive()):
+                self._thread = threading.Thread(target=self._run, daemon=True)
+                self._thread.start()
+        self._wake.set()
+
+    def snapshot(self, stores: list[Store]) -> dict:
+        """What's known about `stores` right now."""
+        with self._lock:
+            cached = {s.key: self._prices[s.key] for s in stores if s.key in self._prices}
+            sources = {s.source for s in stores}
+            errors = [msg for source, (when, msg) in self._errors.items()
+                      if source in sources and when > self._ok_at.get(source, 0)]
+            return {
+                "checked": set(cached),
+                "deals": [d for _, deals in cached.values() for d in deals],
+                "loading": any(s.key in self._queued for s in stores),
+                "updated_at": min((at for at, _ in cached.values()), default=None),
+                "errors": errors,
+            }
+
+    def run_once(self) -> bool:
+        """Fetch everything queued so far. Returns False when there was nothing to do."""
+        with self._lock:
+            batch = list(self._queued.values())
+        if not batch:
+            return False
+        try:
+            deals, errors, failed = self._fetch(batch)
+        except Exception as e:
+            deals, errors, failed = [], [str(e)], {s.source for s in batch}
+        now = self._clock()
+        by_store: dict[str, list[Deal]] = {}
+        for deal in deals:
+            by_store.setdefault(deal.store.key, []).append(deal)
+        with self._lock:
+            for store in batch:
+                if store.source in failed:
+                    self._failed_at[store.key] = now  # keep any older prices
+                else:
+                    self._prices[store.key] = (now, by_store.get(store.key, []))
+                    self._failed_at.pop(store.key, None)
+                self._queued.pop(store.key, None)
+            for source in {s.source for s in batch}:
+                if source in failed:
+                    msg = next((e for e in errors if e.startswith(source)), f"{source}: failed")
+                    self._errors[source] = (now, msg)
+                else:
+                    self._ok_at[source] = now
+        return True
+
+    def _run(self) -> None:
+        while True:
+            self._wake.wait(timeout=60)
+            self._wake.clear()
+            while self.run_once():
+                pass
+            with self._lock:
+                if not self._queued:
+                    self._thread = None
+                    return
+
+
+prices = PriceCache(lambda stores: fetch_prices(config, stores))
+_cities: dict[str, tuple[float, list[Store], list[str]]] = {}  # city (lowercase) -> (when, stores, errors)
+_cities_lock = threading.Lock()
+
+
+def stores_in_city(city: str) -> tuple[list[Store], list[str]]:
+    key = city.strip().lower()
+    with _cities_lock:
+        hit = _cities.get(key)
+    max_age = CITY_MAX_AGE if hit and not hit[2] else 300  # retry failed lookups sooner
+    if hit and time.time() - hit[0] < max_age:
+        return hit[1], hit[2]
+    stores, errors = city_stores(config, city)
+    with _cities_lock:
+        _cities[key] = (time.time(), stores, errors)
+    return stores, errors
+
+
+def parse_favourites(raw) -> list[Store]:
+    """The favourite stores a browser sent, ignoring anything malformed."""
+    stores = []
+    for item in (raw if isinstance(raw, list) else [])[:MAX_FAVOURITES]:
+        if not isinstance(item, dict) or item.get("source") not in SOURCES or not item.get("store_id"):
+            continue
+        stores.append(Store(**{f: str(item.get(f) or "")[:200] for f in STORE_FIELDS}))
+    return stores
+
+
+def _store_json(store: Store, favourite_keys: set, checked: bool = False) -> dict:
+    return {**asdict(store), "key": store.key, "favourite": store.key in favourite_keys, "checked": checked}
 
 
 def _deal_json(deal: Deal) -> dict:
@@ -36,96 +157,54 @@ def _deal_json(deal: Deal) -> dict:
     return {**d, "store_key": deal.store.key, "percent_off": deal.percent_off, "discounted": deal.is_discounted}
 
 
-def _refresh() -> None:
-    while True:
-        try:
-            stores, deals, errors = collect(config, load_favourites(), city=_state["city"])
-        except Exception as e:
-            stores, deals, errors = [], [], [str(e)]
-        with _lock:
-            _state.update(stores=stores, deals=deals, errors=errors,
-                          updated_at=datetime.now().isoformat(timespec="minutes"))
-            if not _state["rerun"]:
-                _state["loading"] = False
-                return
-            _state["rerun"] = False
-
-
-def start_refresh() -> None:
-    with _lock:
-        if _state["loading"]:
-            _state["rerun"] = True
-            return
-        _state["loading"] = True
-    threading.Thread(target=_refresh, daemon=True).start()
-
-
 @app.get("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
-@app.get("/api/state")
+@app.post("/api/state")
 def get_state():
-    favourites = load_favourites()
-    with _lock:
-        checked = {s.key: s for s in _state["stores"]}
-        # Favourites are always listed, even before they've been checked.
-        stores = {**favourites, **checked}
-        return jsonify({
-            "city": _state["city"],
-            "loading": _state["loading"],
-            "updated_at": _state["updated_at"],
-            "errors": _state["errors"],
-            "stores": [_store_json(s, favourites, s.key in checked) for s in stores.values()],
-            "deals": [_deal_json(d) for d in _state["deals"]],
-        })
+    """Body: {"city": "Turku", "favourites": [store, ...], "refresh": false}"""
+    body = request.get_json(silent=True) or {}
+    city = str(body.get("city") or "").strip()[:60] or config["stores"]["city"]
+    favourites = parse_favourites(body.get("favourites"))
+    in_city, errors = stores_in_city(city)
 
+    # Favourite stores are always checked, even when they're in another city.
+    stores = {s.key: s for s in in_city}
+    for fav in favourites:
+        stores.setdefault(fav.key, fav)
+    stores = list(stores.values())
 
-@app.post("/api/refresh")
-def refresh():
-    city = (request.get_json(silent=True) or {}).get("city", "").strip()
-    if city:
-        _state["city"] = city
-    start_refresh()
-    return get_state()
+    prices.request(stores, REFRESH_AGE if body.get("refresh") else MAX_AGE)
+    snap = prices.snapshot(stores)
+    favourite_keys = {f.key for f in favourites}
+    updated = snap["updated_at"]
+    return jsonify({
+        "city": city,
+        "city_found": bool(in_city) or bool(errors),  # False: no stores in this city, e.g. a typo
+        "loading": snap["loading"],
+        "updated_at": datetime.fromtimestamp(updated).isoformat(timespec="minutes") if updated else None,
+        "errors": errors + snap["errors"],
+        "stores": [_store_json(s, favourite_keys, s.key in snap["checked"]) for s in stores],
+        "deals": [_deal_json(d) for d in sorted(snap["deals"], key=lambda d: (d.discounted_price, d.store.name))],
+    })
 
 
 @app.get("/api/stores/search")
 def store_search():
-    query = request.args.get("q", "").strip()
+    query = request.args.get("q", "").strip()[:60]
     if len(query) < 2:
         return jsonify([])
-    favourites = load_favourites()
-    return jsonify([_store_json(s, favourites) for s in search_stores(query)])
-
-
-@app.put("/api/favourites/<path:key>")
-def add_favourite(key):
-    store = Store(**{f: request.json[f] for f in ("chain", "store_id", "name", "location", "map_url", "source")})
-    if store.key != key:
-        return jsonify({"error": "key mismatch"}), 400
-    favourites = load_favourites()
-    favourites[key] = store
-    save_favourites(favourites)
-    # A favourite from outside the current list hasn't been checked for deals yet.
-    if not any(s.key == key for s in _state["stores"]):
-        start_refresh()
-    return jsonify({"ok": True})
-
-
-@app.delete("/api/favourites/<path:key>")
-def remove_favourite(key):
-    favourites = load_favourites()
-    favourites.pop(key, None)
-    save_favourites(favourites)
-    return jsonify({"ok": True})
+    return jsonify([_store_json(s, set()) for s in search_stores(query)])
 
 
 def main() -> None:
-    start_refresh()
-    print("Irtokarkki running at http://localhost:5000")
-    app.run(host="127.0.0.1", port=5000)
+    host = os.environ.get("IRTOKARKKI_HOST", "127.0.0.1")
+    port = int(os.environ.get("IRTOKARKKI_PORT", "5000"))
+    print(f"Irtokarkki running at http://{'localhost' if host == '127.0.0.1' else host}:{port}")
+    from waitress import serve
+    serve(app, host=host, port=port, threads=8)
 
 
 if __name__ == "__main__":

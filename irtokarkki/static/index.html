@@ -4,202 +4,309 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Irtokarkki</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍬</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><g transform='rotate(45 8.5 18.5)'><rect x='3' y='13' width='11' height='11' rx='2.5' fill='%232A1630'/></g><circle cx='20.5' cy='11' r='6' fill='none' stroke='%23D91A5B' stroke-width='4'/><ellipse cx='22' cy='24' rx='5' ry='3.6' fill='%23FFD84A' transform='rotate(-20 22 24)'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
 <style>
+  /* Sugar-white paper, liquorice-plum ink, raspberry for actions, lemon for sale tags. */
   :root {
-    --bg: #faf7f5;
+    --paper: #f6f2f7;
     --surface: #ffffff;
-    --surface-2: #f3eeea;
-    --text: #23201e;
-    --muted: #6f6762;
-    --border: #e6dfda;
-    --accent: #d6336c;
-    --accent-soft: #fde8ef;
-    --star: #e8a400;
+    --surface-2: #efe8f0;
+    --ink: #2a1630;
+    --muted: #74627a;
+    --rule: #e4dae6;
+    --leader: #c9bacd;
+    --raspberry: #d91a5b;
+    --on-raspberry: #ffffff;
+    --raspberry-soft: #fbe4ed;
+    --lemon: #ffd84a;
+    --on-lemon: #2a1630;
     --s-group: #0b7a3e;
-    --s-group-soft: #e3f3ea;
-    --k-group: #d9560b;
-    --k-group-soft: #fdeee3;
-    --danger-soft: #fdecec;
-    --danger: #b42318;
-    --shadow: 0 1px 2px rgba(35, 32, 30, .06), 0 2px 8px rgba(35, 32, 30, .04);
+    --k-group: #dd560c;
+    --on-mark: #ffffff;
+    --lift: 0 1px 0 rgba(42, 22, 48, .04), 0 18px 40px -22px rgba(42, 22, 48, .35);
+    --display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+    --text: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #171514;
-      --surface: #211e1c;
-      --surface-2: #2b2725;
-      --text: #f1ece8;
-      --muted: #a69d97;
-      --border: #3a3532;
-      --accent: #f06595;
-      --accent-soft: #3d1f2a;
-      --star: #f5b82e;
-      --s-group: #4cc283;
-      --s-group-soft: #1b3326;
-      --k-group: #ff9550;
-      --k-group-soft: #3a2518;
-      --danger-soft: #3b1d1b;
-      --danger: #ff8a80;
-      --shadow: none;
+      --paper: #1b1020;
+      --surface: #251729;
+      --surface-2: #322336;
+      --ink: #f5edf6;
+      --muted: #b5a4ba;
+      --rule: #3b2b40;
+      --leader: #5a4660;
+      --raspberry: #ff5288;
+      --on-raspberry: #1b1020;
+      --raspberry-soft: #42192d;
+      --s-group: #43c47f;
+      --k-group: #ff8a3d;
+      --on-mark: #1b1020;
+      --lift: none;
     }
   }
+
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 400 16px/1.5 var(--text);
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  h1 { font-size: 24px; margin: 0; letter-spacing: -.01em; }
-  .status { color: var(--muted); font-size: 13px; margin-top: 4px; min-height: 19px; }
-  .lang { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .now, .pprice, .count { font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 18px 20px 120px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--raspberry); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  svg.icon { width: 1em; height: 1em; flex: none; }
+
+  /* Top bar */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .wordmark { font: 600 19px/1 var(--display); letter-spacing: -.02em; }
+  .logo { width: 32px; height: 32px; overflow: visible; }
+  .logo g { transform-box: fill-box; transform-origin: center; animation: drop .6s cubic-bezier(.3, 1.5, .5, 1) backwards; }
+  .logo g:nth-child(2) { animation-delay: .08s; }
+  .logo g:nth-child(3) { animation-delay: .16s; }
+  .logo.busy g { animation: bob 1s ease-in-out infinite; }
+  .logo.busy g:nth-child(2) { animation-delay: .15s; }
+  .logo.busy g:nth-child(3) { animation-delay: .3s; }
+  @keyframes drop { from { transform: translateY(-16px); opacity: 0; } }
+  @keyframes bob { 50% { transform: translateY(-4px); } }
+
+  .lang { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); }
   .lang button {
-    border: none; border-radius: 0; padding: 5px 10px; font-size: 13px; font-weight: 600;
-    color: var(--muted); background: none;
+    border: none; background: none; border-radius: 999px; padding: 6px 11px;
+    font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--muted);
   }
-  .lang button + button { border-left: 1px solid var(--border); }
-  .lang button:hover { color: var(--text); background: var(--surface-2); }
-  .lang button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .lang button:hover { color: var(--ink); }
+  .lang button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(42, 22, 48, .14); }
 
-  .toolbar { display: flex; gap: 8px; margin: 14px 0 12px; flex-wrap: wrap; }
-  input[type=text] {
-    flex: 1; min-width: 160px;
-    padding: 9px 12px; font: inherit; color: var(--text);
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  /* Hero: the answer to "is irtokarkki on sale near me?" */
+  .hero { margin: 64px 0 0; }
+  h1 {
+    margin: 0; max-width: 12ch;
+    font: 600 clamp(36px, 8vw, 60px)/1.02 var(--display); letter-spacing: -.035em;
+    text-wrap: balance;
   }
-  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
-  button {
-    font: inherit; cursor: pointer; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--surface); color: var(--text);
-    padding: 9px 14px;
-  }
-  button:hover { background: var(--surface-2); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  button.primary:hover { filter: brightness(1.08); }
-  button:disabled { opacity: .6; cursor: default; }
+  .status { margin: 16px 0 0; min-height: 24px; color: var(--muted); font-size: 16px; }
 
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .field {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 999px;
+    padding: 6px 6px 6px 18px; box-shadow: var(--lift);
+  }
+  .field:focus-within { border-color: var(--raspberry); box-shadow: 0 0 0 3px var(--raspberry-soft), var(--lift); }
+  .field .icon { color: var(--muted); font-size: 18px; }
+  .field input {
+    flex: 1; min-width: 0; border: none; outline: none; background: none; color: var(--ink);
+    font: 500 16px var(--text); padding: 11px 4px;
+  }
+  .field input::placeholder { color: var(--muted); font-weight: 400; }
+  #cityForm { margin-top: 32px; }
+  .primary {
+    flex: none; border: none; border-radius: 999px; padding: 12px 22px;
+    background: var(--raspberry); color: var(--on-raspberry); font-weight: 700; font-size: 15px;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .primary:hover { filter: brightness(1.06); }
+  .primary:active { transform: scale(.97); }
+  .primary:disabled { opacity: .55; cursor: default; filter: none; transform: none; }
+
+  .error {
+    margin: 20px 0 0; padding: 12px 16px; border-radius: 14px;
+    background: var(--raspberry-soft); color: var(--ink); font-size: 15px;
+  }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 28px; margin: 56px 0 22px; border-bottom: 1px solid var(--rule); }
   .tab {
-    border: none; background: none; border-radius: 0; padding: 10px 12px;
-    color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
+    position: relative; display: inline-flex; align-items: center; gap: 8px;
+    border: none; background: none; padding: 12px 0 14px;
+    font-weight: 650; font-size: 16px; color: var(--muted);
   }
-  .tab:hover { background: none; color: var(--text); }
-  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
-  .count { font-size: 12px; background: var(--surface-2); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--ink); }
+  .tab.active::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+    border-radius: 3px 3px 0 0; background: var(--raspberry);
+  }
+  .count {
+    display: inline-flex; align-items: center; gap: 3px; min-width: 26px; justify-content: center;
+    padding: 3px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink);
+    font: 500 12px/1.2 var(--display);
+  }
+  .count .icon { font-size: 11px; }
 
-  .filters { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .filters { margin: 0 0 24px; }
   .chip {
-    padding: 5px 12px; border-radius: 999px; font-size: 13px;
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--rule); background: none; border-radius: 999px; padding: 7px 14px;
+    font-size: 14px; font-weight: 600;
   }
-  .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .chip:hover { border-color: var(--muted); }
+  .chip .icon { font-size: 15px; }
+  .chip.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .chip.on .icon { fill: currentColor; }
 
-  .card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden;
+  /* Stores */
+  .store-head { display: flex; align-items: center; gap: 14px; }
+  .mark {
+    flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+    font: 600 14px/1 var(--display); color: var(--on-mark);
   }
-  .store-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .mark.s_group { background: var(--s-group); }
+  .mark.k_group { background: var(--k-group); }
   .store-info { flex: 1; min-width: 0; }
-  .store-name { font-weight: 650; font-size: 16px; }
-  .store-loc { color: var(--muted); font-size: 13px; }
-  .store-loc a { color: inherit; }
-  .badge {
-    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .02em;
-    padding: 2px 7px; border-radius: 5px; margin-right: 6px; vertical-align: 2px;
-  }
-  .badge.s_group { background: var(--s-group-soft); color: var(--s-group); }
-  .badge.k_group { background: var(--k-group-soft); color: var(--k-group); }
+  .store-name { margin: 0; font-size: 17px; font-weight: 650; line-height: 1.3; }
+  .store-loc { color: var(--muted); font-size: 14px; margin-top: 1px; }
+  .store-loc a { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-decoration: none; }
+  .store-loc a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .store-loc .icon { font-size: 13px; }
 
   .star {
-    border: none; background: none; padding: 6px; font-size: 22px; line-height: 1;
-    color: var(--muted); border-radius: 8px;
+    flex: none; display: grid; place-items: center; width: 40px; height: 40px;
+    border: none; background: none; border-radius: 50%; color: var(--muted);
   }
-  .star:hover { background: var(--surface-2); color: var(--star); }
-  .star.on { color: var(--star); }
+  .star .icon { font-size: 22px; }
+  .star:hover { background: var(--surface-2); color: var(--ink); }
+  .star.on { color: var(--raspberry); }
+  .star.on .icon { fill: currentColor; }
 
+  /* Stores with a discount: raised, with a lemon price tag per deal. */
+  .store.featured {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 24px;
+    padding: 18px 22px 8px; margin-bottom: 18px; box-shadow: var(--lift);
+  }
+  .store-body { margin-left: 48px; }
   .deal {
-    display: grid; grid-template-columns: 1fr auto; gap: 4px 16px;
-    padding: 12px 16px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    padding: 22px 0 16px; border-top: 1px solid var(--rule);
   }
-  .deal-name { font-weight: 500; }
-  .deal-meta { color: var(--muted); font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .note { background: var(--surface-2); border-radius: 5px; padding: 1px 6px; font-size: 12px; color: var(--text); }
-  .prices { text-align: right; grid-row: span 2; align-self: center; white-space: nowrap; }
-  .price-now { font-size: 20px; font-weight: 700; color: var(--accent); }
-  .price-now.regular { color: var(--text); font-size: 16px; font-weight: 600; }
-  .deal.regular { grid-template-columns: 1fr auto; align-items: center; }
-  .deal.regular .prices { grid-row: auto; }
-  .deal.regular .deal-name { color: var(--muted); }
-  .notice {
-    display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; padding: 8px 12px;
-    background: var(--surface-2); border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 500;
-  }
-  .notice::before { content: "ⓘ"; font-size: 15px; }
-  .price-was { color: var(--muted); text-decoration: line-through; font-size: 13px; margin-right: 6px; }
-  .off { display: inline-block; font-size: 12px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 5px; padding: 1px 6px; }
+  .store-head + .store-body .deal:first-child { margin-top: 12px; }
+  .deal-name { font-weight: 600; font-size: 16px; }
+  .deal-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; color: var(--muted); font-size: 14px; }
+  .note { background: var(--surface-2); color: var(--ink); border-radius: 6px; padding: 0 8px; font-size: 13px; font-weight: 600; }
 
-  .row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--border); }
+  .price-tag { position: relative; flex: none; margin-right: 10px; }
+  .tag {
+    display: grid; justify-items: start; min-width: 108px; padding: 9px 18px 9px 30px; background: var(--lemon); color: var(--on-lemon);
+    clip-path: polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%);
+    border-radius: 0 10px 10px 0;
+  }
+  .tag::before {
+    content: ""; position: absolute; left: 12px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px;
+    border-radius: 50%; background: var(--surface);
+  }
+  .was { font-size: 13px; text-decoration: line-through; opacity: .7; }
+  .now { font: 600 22px/1.15 var(--display); letter-spacing: -.03em; }
+  .off {
+    position: absolute; top: -14px; right: -12px; display: grid; place-items: center;
+    width: 44px; height: 44px; border-radius: 50%; transform: rotate(10deg);
+    background: var(--raspberry); color: var(--on-raspberry); font: 600 11px/1 var(--display); letter-spacing: -.02em;
+  }
+
+  /* Regular prices: a price board with dotted leaders. */
+  .price-list { list-style: none; margin: 0; padding: 4px 0 10px; }
+  .deal + .price-list, .deal ~ .price-list { border-top: 1px solid var(--rule); padding-top: 10px; }
+  .price-row { display: flex; align-items: baseline; align-items: last baseline; padding: 7px 0; font-size: 15px; }
+  .pname { flex: 0 1 auto; min-width: 0; }
+  .leader { flex: 1 1 20px; min-width: 20px; margin: 0 10px; border-bottom: 2px dotted var(--leader); transform: translateY(-4px); }
+  .pprice { flex: none; font: 500 15px/1.2 var(--display); letter-spacing: -.02em; }
+
+  h2 {
+    display: flex; align-items: baseline; gap: 10px;
+    margin: 56px 0 6px; font: 500 19px/1.3 var(--display); letter-spacing: -.02em;
+  }
+  h2 .h-count { font: 500 15px var(--text); color: var(--muted); letter-spacing: 0; }
+  .store.plain { padding: 18px 0 6px; border-top: 1px solid var(--rule); }
+  h2 + .store.plain { border-top: none; }
+  .store.plain .price-list { margin-top: 8px; }
+
+  /* Compact store lists */
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 20px; overflow: hidden; margin-top: 14px; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 12px 10px 12px 16px; border-top: 1px solid var(--rule); }
   .row:first-child { border-top: none; }
-  .deal-count { font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
-  .deal-count.none { color: var(--muted); font-weight: 400; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; font-weight: 600; }
+  .row .store-name { font-size: 16px; }
+  .deal-count { flex: none; font-size: 14px; font-weight: 700; color: var(--raspberry); white-space: nowrap; }
+  .deal-count.none { color: var(--muted); font-weight: 500; }
 
-  .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
-  .empty .big { font-size: 36px; }
-  .error { background: var(--danger-soft); color: var(--danger); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
-  .quiet { color: var(--muted); font-size: 13px; }
+  .empty { margin: 8px 0 0; max-width: 46ch; color: var(--muted); font-size: 16px; }
+  .quiet { color: var(--muted); font-size: 15px; margin: 10px 0 0; max-width: 56ch; }
+  #storeSearch { padding-block: 9px; }
   .spinner {
-    display: inline-block; width: 12px; height: 12px; border: 2px solid var(--muted);
-    border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px;
+    display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -1px;
+    border: 2px solid var(--muted); border-right-color: transparent; border-radius: 50%;
+    animation: spin .8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  [hidden] { display: none !important; }
 
-  @media (max-width: 520px) {
-    .deal { grid-template-columns: 1fr; }
-    .prices { text-align: left; grid-row: auto; }
-    .deal.regular { grid-template-columns: 1fr auto; }
-    .deal.regular .prices { text-align: right; }
+  @media (max-width: 560px) {
+    .wrap { padding: 14px 16px 96px; }
+    .hero { margin-top: 44px; }
+    .tabs { margin-top: 44px; }
+    .store.featured { padding: 16px 16px 6px; border-radius: 20px; }
+    .store-body { margin-left: 0; }
+    .deal { gap: 12px; }
+    .primary { padding: 12px 16px; }
+    #cityForm { padding-left: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logo g, .logo.busy g, .spinner { animation: none; }
+    .primary { transition: none; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>🍬 Irtokarkki</h1>
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" id="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <g><rect x="3" y="13" width="11" height="11" rx="2.5" transform="rotate(45 8.5 18.5)" fill="var(--ink)"/></g>
+        <g><circle cx="20.5" cy="11" r="6" fill="none" stroke="var(--raspberry)" stroke-width="4"/></g>
+        <g><ellipse cx="22" cy="24" rx="5" ry="3.6" transform="rotate(-20 22 24)" fill="var(--lemon)"/></g>
+      </svg>
+      <span class="wordmark">Irtokarkki</span>
+    </div>
     <div class="lang" role="group" aria-label="Kieli / Språk / Language">
       <button data-lang="fi" title="Suomi">FI</button>
       <button data-lang="sv" title="Svenska">SV</button>
       <button data-lang="en" title="English">EN</button>
     </div>
   </header>
-  <div class="status" id="status"></div>
 
-  <form class="toolbar" id="cityForm">
-    <input type="text" id="city" data-i18n-placeholder="cityPlaceholder" data-i18n-label="cityLabel">
-    <button type="submit" class="primary" id="refreshBtn" data-i18n="check"></button>
-  </form>
+  <section class="hero">
+    <h1 id="headline" aria-live="polite"></h1>
+    <p class="status" id="status"></p>
+    <form class="field" id="cityForm">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+      <input type="text" id="city" data-i18n-placeholder="cityPlaceholder" data-i18n-label="cityLabel" autocomplete="off">
+      <button type="submit" class="primary" id="refreshBtn" data-i18n="check"></button>
+    </form>
+  </section>
 
   <div id="errors"></div>
 
   <nav class="tabs">
     <button class="tab active" data-tab="deals"><span data-i18n="tabDeals"></span> <span class="count" id="dealsCount">0</span></button>
-    <button class="tab" data-tab="stores"><span data-i18n="tabStores"></span> <span class="count" id="favCount">0 ★</span></button>
+    <button class="tab" data-tab="stores"><span data-i18n="tabStores"></span> <span class="count" id="favCount">0</span></button>
   </nav>
 
   <section id="dealsView">
     <div class="filters">
-      <button class="chip" id="favOnly" data-i18n="favOnly"></button>
+      <button class="chip" id="favOnly"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.5 6 .9-4.35 4.25 1.03 6L12 17l-5.38 2.85 1.03-6L3.3 9.6l6-.9z"/></svg><span data-i18n="favOnly"></span></button>
     </div>
     <div id="dealsList"></div>
   </section>
 
   <section id="storesView" hidden>
-    <div class="toolbar" style="margin-top:0">
-      <input type="text" id="storeSearch" data-i18n-placeholder="storeSearch" data-i18n-label="storeSearchLabel">
-    </div>
+    <label class="field">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+      <input type="text" id="storeSearch" data-i18n-placeholder="storeSearch" data-i18n-label="storeSearchLabel" autocomplete="off">
+    </label>
     <div id="storesList"></div>
   </section>
 </div>
@@ -208,19 +315,18 @@
 const STRINGS = {
   fi: {
     cityPlaceholder: "Kaupunki, esim. Turku", cityLabel: "Kaupunki", check: "Hae tarjoukset",
-    tabDeals: "Tarjoukset", tabStores: "Kaupat", favOnly: "★ Vain suosikit",
-    storeSearch: "Etsi mitä tahansa kauppaa nimellä tai kaupungilla, esim. ”Prisma Kaleva” tai ”Tampere”",
+    tabDeals: "Tarjoukset", tabStores: "Kaupat", favOnly: "Vain suosikit",
+    storeSearch: "Etsi kauppaa nimellä tai kaupungilla, esim. ”Prisma Kaleva”",
     storeSearchLabel: "Etsi kauppoja",
-    checking: "Tarkistetaan kauppoja…", updated: "Päivitetty {time} · {n} kauppaa tarkistettu",
+    heroChecking: "Etsitään tarjouksia…", heroNone: "Ei tarjouksia juuri nyt", heroNoneFav: "Ei tarjouksia suosikeissasi",
+    heroOne: "1 irtokarkki­tarjous", heroMany: "{n} irtokarkki­tarjousta",
+    heroNoCity: "Ei kauppoja paikassa ”{city}”", noCityHint: "Tarkista kaupungin nimi.",
+    checking: "Tarkistetaan kauppoja…", updated: "Tarkistettu {n} kauppaa {time}", updatedOne: "Tarkistettu 1 kauppa {time}",
     error: "Joitakin kauppoja ei voitu tarkistaa: {e}",
     addFav: "Lisää suosikkeihin", removeFav: "Poista suosikeista", map: "Kartta",
     until: "Voimassa {date} asti", batch: "{n} kpl / {price}",
-    loadingDeals: "Etsitään irtokarkkitarjouksia…",
     noFavsYet: "Et ole vielä valinnut suosikkikauppoja. Merkitse kauppoja tähdellä Kaupat-välilehdellä.",
-    noFavDeals: "Millään suosikkikaupallasi ei ole juuri nyt irtokarkkitarjousta.",
-    noDeals: "Irtokarkkitarjouksia ei ole juuri nyt. Katso myöhemmin uudelleen!",
-    noDiscountNow: "Ei alennusta tällä hetkellä", storesNoDiscount: "Kaupat ilman alennusta",
-    storesNoProducts: "Ei irtokarkkia verkkovalikoimassa",
+    storesNoDiscount: "Kaupat ilman alennusta", storesNoProducts: "Ei irtokarkkia verkkovalikoimassa",
     checkingShort: "tarkistetaan…", dealsOne: "1 tarjous", dealsMany: "{n} tarjousta", noDealsShort: "ei tarjouksia",
     noStoresFound: "Kauppoja ei löytynyt.", favourites: "Suosikit",
     favHint: "Lisää kauppa suosikkeihin napauttamalla ☆. Suosikkikaupat tarkistetaan aina, myös muissa kaupungeissa.",
@@ -228,19 +334,18 @@ const STRINGS = {
   },
   sv: {
     cityPlaceholder: "Stad, t.ex. Åbo", cityLabel: "Stad", check: "Sök erbjudanden",
-    tabDeals: "Erbjudanden", tabStores: "Butiker", favOnly: "★ Endast favoriter",
-    storeSearch: "Sök vilken butik som helst med namn eller stad, t.ex. ”Prisma Kaleva” eller ”Tammerfors”",
+    tabDeals: "Erbjudanden", tabStores: "Butiker", favOnly: "Endast favoriter",
+    storeSearch: "Sök butik med namn eller stad, t.ex. ”Prisma Kaleva”",
     storeSearchLabel: "Sök butiker",
-    checking: "Kontrollerar butiker…", updated: "Uppdaterad {time} · {n} butiker kontrollerade",
+    heroChecking: "Söker erbjudanden…", heroNone: "Inga erbjudanden just nu", heroNoneFav: "Inga erbjudanden i dina favoriter",
+    heroOne: "1 erbjudande på lösgodis", heroMany: "{n} erbjudanden på lösgodis",
+    heroNoCity: "Inga butiker i ”{city}”", noCityHint: "Kontrollera stadens namn.",
+    checking: "Kontrollerar butiker…", updated: "Kontrollerade {n} butiker {time}", updatedOne: "Kontrollerade 1 butik {time}",
     error: "Vissa butiker kunde inte kontrolleras: {e}",
     addFav: "Lägg till bland favoriter", removeFav: "Ta bort från favoriter", map: "Karta",
     until: "Gäller till {date}", batch: "{n} st / {price}",
-    loadingDeals: "Söker erbjudanden på lösgodis…",
     noFavsYet: "Du har inte valt några favoritbutiker ännu. Stjärnmärk butiker under fliken Butiker.",
-    noFavDeals: "Ingen av dina favoritbutiker har lösgodis på rea just nu.",
-    noDeals: "Inga erbjudanden på lösgodis just nu. Titta igen senare!",
-    noDiscountNow: "Ingen rabatt för tillfället", storesNoDiscount: "Butiker utan rabatt",
-    storesNoProducts: "Inget lösgodis i nätsortimentet",
+    storesNoDiscount: "Butiker utan rabatt", storesNoProducts: "Inget lösgodis i nätsortimentet",
     checkingShort: "kontrolleras…", dealsOne: "1 erbjudande", dealsMany: "{n} erbjudanden", noDealsShort: "inga erbjudanden",
     noStoresFound: "Inga butiker hittades.", favourites: "Favoriter",
     favHint: "Tryck på ☆ för att lägga till en butik bland favoriterna. Favoritbutiker kontrolleras alltid, även i andra städer.",
@@ -248,19 +353,18 @@ const STRINGS = {
   },
   en: {
     cityPlaceholder: "City, e.g. Turku", cityLabel: "City", check: "Check for deals",
-    tabDeals: "Discounts", tabStores: "Stores", favOnly: "★ Favourites only",
-    storeSearch: "Find any store by name or city, e.g. “Prisma Kaleva” or “Tampere”",
+    tabDeals: "Discounts", tabStores: "Stores", favOnly: "Favourites only",
+    storeSearch: "Find any store by name or city, e.g. “Prisma Kaleva”",
     storeSearchLabel: "Search stores",
-    checking: "Checking stores…", updated: "Updated {time} · {n} stores checked",
+    heroChecking: "Looking for deals…", heroNone: "No deals right now", heroNoneFav: "No deals in your favourites",
+    heroOne: "1 irtokarkki deal", heroMany: "{n} irtokarkki deals",
+    heroNoCity: "No stores in “{city}”", noCityHint: "Check the spelling of the city.",
+    checking: "Checking stores…", updated: "Checked {n} stores on {time}", updatedOne: "Checked 1 store on {time}",
     error: "Couldn't check some stores: {e}",
     addFav: "Add to favourites", removeFav: "Remove from favourites", map: "Map",
     until: "Until {date}", batch: "{n} pcs / {price}",
-    loadingDeals: "Looking for irtokarkki deals…",
     noFavsYet: "You haven't picked any favourite stores yet. Star stores in the Stores tab.",
-    noFavDeals: "None of your favourite stores has an irtokarkki discount right now.",
-    noDeals: "No irtokarkki discounts right now. Check again later!",
-    noDiscountNow: "No discount at the moment", storesNoDiscount: "Stores without a discount",
-    storesNoProducts: "No irtokarkki in the online selection",
+    storesNoDiscount: "Stores without a discount", storesNoProducts: "No irtokarkki in the online selection",
     checkingShort: "checking…", dealsOne: "1 deal", dealsMany: "{n} deals", noDealsShort: "no deals",
     noStoresFound: "No stores found.", favourites: "Favourites",
     favHint: "Tap ☆ on a store to add it to your favourites. Favourite stores are always checked for deals, even in other cities.",
@@ -268,6 +372,11 @@ const STRINGS = {
   },
 };
 const LOCALES = { fi: "fi-FI", sv: "sv-FI", en: "en-GB" };
+
+const ICONS = {
+  star: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.5 6 .9-4.35 4.25 1.03 6L12 17l-5.38 2.85 1.03-6L3.3 9.6l6-.9z"/></svg>`,
+  pin: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`,
+};
 
 function detectLang() {
   try { const saved = localStorage.getItem("lang"); if (STRINGS[saved]) return saved; } catch {}
@@ -286,7 +395,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const euro = (n) => new Intl.NumberFormat(LOCALES[lang], { style: "currency", currency: "EUR" }).format(n);
 const fmtDate = (iso) => iso ? new Intl.DateTimeFormat(LOCALES[lang]).format(new Date(iso + "T12:00")) : "";
-const fmtDateTime = (iso) => new Intl.DateTimeFormat(LOCALES[lang], { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+const fmtDateTime = (iso) => new Intl.DateTimeFormat(LOCALES[lang], { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 const productName = (d) => (d.product_names && d.product_names[lang]) || d.product;
 
 function setLang(code) {
@@ -299,11 +408,23 @@ function setLang(code) {
   document.querySelectorAll(".lang button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === code)));
   render();
 }
-let state = { stores: [], deals: [], loading: false };
+let state = { stores: [], deals: [], loading: true };
 let favOnly = false;
 try { favOnly = localStorage.getItem("favOnly") === "1"; } catch {}
 let searchResults = null;
 let pollTimer = null;
+
+// Each visitor's city and favourite stores are kept in their own browser and sent with every request.
+const STORE_FIELDS = ["chain", "store_id", "name", "location", "map_url", "source", "location_sv"];
+function readStored(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; }
+}
+function writeStored(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+let favourites = readStored("favourites", []);
+let city = readStored("city", "");
+const isFavourite = (key) => favourites.some((f) => `${f.source}:${f.store_id}` === key);
 
 async function api(method, url, body) {
   const res = await fetch(url, {
@@ -314,8 +435,11 @@ async function api(method, url, body) {
   return res.json();
 }
 
-async function load() {
-  setState(await api("GET", "/api/state"));
+async function load(refresh = false) {
+  clearTimeout(pollTimer);
+  const requestedCity = city;
+  const s = await api("POST", "/api/state", { city, favourites, refresh });
+  if (requestedCity === city) setState(s);  // ignore answers for a city the visitor has since changed
 }
 
 function setState(s) {
@@ -323,26 +447,42 @@ function setState(s) {
   if (document.activeElement !== $("city")) $("city").value = s.city;
   render();
   clearTimeout(pollTimer);
-  if (s.loading) pollTimer = setTimeout(load, 2000);
+  if (s.loading) pollTimer = setTimeout(() => load().catch(showError), 2000);
+}
+
+function showError(err) {
+  $("errors").innerHTML = `<div class="error">${esc(err.message)}</div>`;
 }
 
 function storeByKey() {
   return Object.fromEntries(state.stores.map((s) => [s.key, s]));
 }
 
-function badge(store) {
-  return `<span class="badge ${esc(store.source)}">${esc(store.chain)}</span>`;
+const isShown = (store) => store && store.checked && (!favOnly || store.favourite);
+
+function mark(store) {
+  return `<span class="mark ${esc(store.source)}" title="${esc(store.chain)}" aria-hidden="true">${store.source === "k_group" ? "K" : "S"}</span>`;
 }
 
 function starButton(store) {
   const label = t(store.favourite ? "removeFav" : "addFav");
   return `<button class="star ${store.favourite ? "on" : ""}" data-key="${esc(store.key)}"
-    title="${label}" aria-label="${label}" aria-pressed="${store.favourite}">${store.favourite ? "★" : "☆"}</button>`;
+    title="${label}" aria-label="${label}" aria-pressed="${store.favourite}">${ICONS.star}</button>`;
 }
 
 function storeLocation(store) {
   const text = esc((lang === "sv" && store.location_sv) || store.location || "");
-  return store.map_url ? `<a href="${esc(store.map_url)}" target="_blank" rel="noopener">${text || t("map")}</a>` : text;
+  return store.map_url ? `<a href="${esc(store.map_url)}" target="_blank" rel="noopener">${ICONS.pin}${text || t("map")}</a>` : text;
+}
+
+const cityMissing = () => state.city_found === false;
+
+function headline(stores) {
+  if (cityMissing()) return t("heroNoCity", { city: state.city });  // set as textContent, so no escaping needed
+  if (state.loading && !state.updated_at) return t("heroChecking");
+  const n = state.deals.filter((d) => d.discounted && isShown(stores[d.store_key])).length;
+  if (n === 0) return t(favOnly ? "heroNoneFav" : "heroNone");
+  return n === 1 ? t("heroOne") : t("heroMany", { n });
 }
 
 function render() {
@@ -350,14 +490,17 @@ function render() {
   const favs = state.stores.filter((s) => s.favourite);
   const checked = state.stores.filter((s) => s.checked).length;
 
-  $("status").innerHTML = state.loading
-    ? `<span class="spinner"></span>${t("checking")}`
-    : state.updated_at ? t("updated", { time: fmtDateTime(state.updated_at), n: checked }) : "";
-  $("refreshBtn").disabled = state.loading;
+  $("headline").textContent = headline(stores);
+  $("logo").classList.toggle("busy", !!state.loading);
+  $("status").textContent = state.loading ? t("checking")
+    : cityMissing() && !checked ? t("noCityHint")
+    : state.updated_at ? t(checked === 1 ? "updatedOne" : "updated", { time: fmtDateTime(state.updated_at), n: checked }) : "";
+  $("refreshBtn").disabled = !!state.loading;
   $("errors").innerHTML = (state.errors || []).map((e) => `<div class="error">${t("error", { e: esc(e) })}</div>`).join("");
   $("dealsCount").textContent = state.deals.filter((d) => d.discounted).length;
-  $("favCount").textContent = `${favs.length} ★`;
+  $("favCount").innerHTML = `${favs.length}${ICONS.star}`;
   $("favOnly").classList.toggle("on", favOnly);
+  $("favOnly").setAttribute("aria-pressed", String(favOnly));
 
   renderDeals(stores, favs);
   renderStores();
@@ -366,8 +509,9 @@ function render() {
 function storeHead(store) {
   return `
       <div class="store-head">
+        ${mark(store)}
         <div class="store-info">
-          <div class="store-name">${badge(store)}${esc(store.name)}</div>
+          <h3 class="store-name">${esc(store.name)}</h3>
           <div class="store-loc">${storeLocation(store)}</div>
         </div>
         ${starButton(store)}
@@ -377,37 +521,39 @@ function storeHead(store) {
 function discountRow(d) {
   return `
         <div class="deal">
-          <div class="deal-name">${esc(productName(d))}</div>
-          <div class="prices">
-            <span class="price-was">${euro(d.original_price)}</span>
-            <span class="price-now">${euro(d.discounted_price)}</span>
-            <div><span class="off">−${d.percent_off} %</span></div>
+          <div>
+            <div class="deal-name">${esc(productName(d))}</div>
+            <div class="deal-meta">
+              ${d.valid_until ? `<span>${t("until", { date: fmtDate(d.valid_until) })}</span>` : ""}
+              ${d.batch_amount > 1 ? `<span class="note">${t("batch", { n: d.batch_amount, price: euro(d.batch_price) })}</span>` : ""}
+              ${d.plussa ? `<span class="note">Plussa</span>` : ""}
+            </div>
           </div>
-          <div class="deal-meta">
-            ${d.valid_until ? `<span>${t("until", { date: fmtDate(d.valid_until) })}</span>` : ""}
-            ${d.batch_amount > 1 ? `<span class="note">${t("batch", { n: d.batch_amount, price: euro(d.batch_price) })}</span>` : ""}
-            ${d.plussa ? `<span class="note">Plussa</span>` : ""}
+          <div class="price-tag">
+            <div class="tag">
+              <span class="was">${euro(d.original_price)}</span>
+              <span class="now">${euro(d.discounted_price)}</span>
+            </div>
+            <span class="off">−${d.percent_off}%</span>
           </div>
         </div>`;
 }
 
-function regularRow(d) {
-  return `
-        <div class="deal regular">
-          <div class="deal-name">${esc(productName(d))}</div>
-          <div class="prices"><span class="price-now regular">${euro(d.discounted_price)}</span></div>
-        </div>`;
+function priceList(prices) {
+  if (!prices.length) return "";
+  return `<ul class="price-list">${prices.map((d) => `
+          <li class="price-row"><span class="pname">${esc(productName(d))}</span><span class="leader" aria-hidden="true"></span><span class="pprice">${euro(d.discounted_price)}</span></li>`).join("")}
+        </ul>`;
 }
 
 function renderDeals(stores, favs) {
   const byStore = {};
   for (const d of state.deals) (byStore[d.store_key] ??= []).push(d);
-  const shown = (store) => store && store.checked && (!favOnly || store.favourite);
   const cheapest = (prices) => Math.min(...prices.map((d) => d.discounted_price));
 
   // 1. Stores with at least one discount: discounted products first, then the rest at their current price.
   const withDiscount = [], withoutDiscount = [], noProducts = [];
-  for (const store of state.stores.filter(shown)) {
+  for (const store of state.stores.filter(isShown)) {
     const prices = (byStore[store.key] || []).slice().sort((a, b) => a.discounted_price - b.discounted_price);
     const discounted = prices.filter((d) => d.discounted);
     if (discounted.length) withDiscount.push({ store, discounted, regular: prices.filter((d) => !d.discounted) });
@@ -421,37 +567,35 @@ function renderDeals(stores, favs) {
   noProducts.sort((a, b) => (b.favourite - a.favourite) || a.name.localeCompare(b.name, lang));
 
   let html = withDiscount.map(({ store, discounted, regular }) => `
-    <article class="card">
+    <article class="store featured">
       ${storeHead(store)}
-      ${discounted.map(discountRow).join("")}
-      ${regular.map(regularRow).join("")}
+      <div class="store-body">
+        ${discounted.map(discountRow).join("")}
+        ${priceList(regular)}
+      </div>
     </article>`).join("");
 
-  if (!withDiscount.length) {
-    const msg = state.loading && !state.updated_at ? t("loadingDeals")
-      : favOnly && !favs.length ? t("noFavsYet")
-      : favOnly ? t("noFavDeals")
-      : t("noDeals");
-    html = `<div class="empty"><div class="big">🍬</div>${msg}</div>`;
-  }
+  // The headline already says when nothing is on sale; only the "no favourites yet" case needs directions.
+  if (!withDiscount.length && favOnly && !favs.length) html = `<p class="empty">${t("noFavsYet")}</p>`;
 
   // 2. Stores that sell irtokarkki but have no discount right now, with current prices.
   if (withoutDiscount.length) {
-    html += `<h2>${t("storesNoDiscount")}</h2>` + withoutDiscount.map(({ store, regular }) => `
-    <article class="card">
+    html += `<h2>${t("storesNoDiscount")} <span class="h-count">${withoutDiscount.length}</span></h2>` +
+      withoutDiscount.map(({ store, regular }) => `
+    <article class="store plain">
       ${storeHead(store)}
-      <div class="notice">${t("noDiscountNow")}</div>
-      ${regular.map(regularRow).join("")}
+      <div class="store-body">${priceList(regular)}</div>
     </article>`).join("");
   }
 
   // 3. Stores whose online selection has no irtokarkki at all.
   if (noProducts.length) {
-    html += `<h2>${t("storesNoProducts")}</h2>
-    <div class="card">${noProducts.map((store) => `
+    html += `<h2>${t("storesNoProducts")} <span class="h-count">${noProducts.length}</span></h2>
+    <div class="panel">${noProducts.map((store) => `
       <div class="row">
+        ${mark(store)}
         <div class="store-info">
-          <div class="store-name" style="font-size:15px">${badge(store)}${esc(store.name)}</div>
+          <div class="store-name">${esc(store.name)}</div>
           <div class="store-loc">${storeLocation(store)}</div>
         </div>
         ${starButton(store)}
@@ -468,8 +612,9 @@ function storeRow(store, dealCounts) {
     : `<span class="deal-count ${n ? "" : "none"}">${n === 0 ? t("noDealsShort") : n === 1 ? t("dealsOne") : t("dealsMany", { n })}</span>`;
   return `
     <div class="row">
+      ${mark(store)}
       <div class="store-info">
-        <div class="store-name" style="font-size:15px">${badge(store)}${esc(store.name)}</div>
+        <div class="store-name">${esc(store.name)}</div>
         <div class="store-loc">${storeLocation(store)}</div>
       </div>
       ${countHtml}
@@ -482,10 +627,9 @@ function renderStores() {
   for (const d of state.deals) if (d.discounted) dealCounts[d.store_key] = (dealCounts[d.store_key] || 0) + 1;
 
   if (searchResults) {
-    const favKeys = new Set(state.stores.filter((s) => s.favourite).map((s) => s.key));
-    const rows = searchResults.map((s) => storeRow({ ...s, favourite: favKeys.has(s.key) }, dealCounts)).join("");
-    $("storesList").innerHTML = rows ? `<div class="card">${rows}</div>`
-      : `<div class="empty">${t("noStoresFound")}</div>`;
+    const rows = searchResults.map((s) => storeRow({ ...s, favourite: isFavourite(s.key) }, dealCounts)).join("");
+    $("storesList").innerHTML = rows ? `<div class="panel">${rows}</div>`
+      : `<p class="quiet">${t("noStoresFound")}</p>`;
     return;
   }
 
@@ -493,26 +637,32 @@ function renderStores() {
   const others = state.stores.filter((s) => !s.favourite && s.checked)
     .sort((a, b) => (dealCounts[b.key] || 0) - (dealCounts[a.key] || 0) || a.name.localeCompare(b.name, lang));
   $("storesList").innerHTML = `
-    <h2>${t("favourites")}</h2>
-    ${favs.length ? `<div class="card">${favs.map((s) => storeRow(s, dealCounts)).join("")}</div>`
+    <h2>${t("favourites")} <span class="h-count">${favs.length}</span></h2>
+    ${favs.length ? `<div class="panel">${favs.map((s) => storeRow(s, dealCounts)).join("")}</div>`
       : `<p class="quiet">${t("favHint")}</p>`}
-    <h2>${t("storesIn", { city: esc(state.city) })}</h2>
-    ${others.length ? `<div class="card">${others.map((s) => storeRow(s, dealCounts)).join("")}</div>`
+    <h2>${t("storesIn", { city: esc(state.city) })} <span class="h-count">${others.length}</span></h2>
+    ${others.length ? `<div class="panel">${others.map((s) => storeRow(s, dealCounts)).join("")}</div>`
       : `<p class="quiet">${state.loading ? t("loading") : t("noOtherStores")}</p>`}`;
 }
 
 async function toggleFavourite(key) {
-  const store = [...(searchResults || []), ...state.stores].find((s) => s.key === key);
-  if (!store) return;
-  const isFav = state.stores.some((s) => s.key === key && s.favourite);
-  if (isFav) await api("DELETE", `/api/favourites/${encodeURIComponent(key)}`);
-  else await api("PUT", `/api/favourites/${encodeURIComponent(key)}`, store);
+  if (isFavourite(key)) {
+    favourites = favourites.filter((f) => `${f.source}:${f.store_id}` !== key);
+  } else {
+    const store = [...(searchResults || []), ...state.stores].find((s) => s.key === key);
+    if (!store) return;
+    favourites = [...favourites, Object.fromEntries(STORE_FIELDS.map((f) => [f, store[f] ?? ""]))];
+  }
+  writeStored("favourites", favourites);
+  // Show the star change straight away; the server then checks any newly added store.
+  state = { ...state, stores: state.stores.map((s) => ({ ...s, favourite: isFavourite(s.key) })) };
+  render();
   await load();
 }
 
 document.addEventListener("click", (e) => {
   const star = e.target.closest(".star");
-  if (star) toggleFavourite(star.dataset.key).catch((err) => alert(err.message));
+  if (star) toggleFavourite(star.dataset.key).catch(showError);
 
   const langBtn = e.target.closest(".lang button");
   if (langBtn) setLang(langBtn.dataset.lang);
@@ -531,9 +681,12 @@ $("favOnly").addEventListener("click", () => {
   render();
 });
 
-$("cityForm").addEventListener("submit", async (e) => {
+$("cityForm").addEventListener("submit", (e) => {
   e.preventDefault();
-  setState(await api("POST", "/api/refresh", { city: $("city").value }));
+  city = $("city").value.trim();
+  writeStored("city", city);
+  $("city").blur();
+  load(true).catch(showError);
 });
 
 let searchTimer;
@@ -543,13 +696,15 @@ $("storeSearch").addEventListener("input", () => {
   if (q.length < 2) { searchResults = null; renderStores(); return; }
   searchTimer = setTimeout(async () => {
     $("storesList").innerHTML = `<p class="quiet"><span class="spinner"></span>${t("searching")}</p>`;
-    const results = await api("GET", `/api/stores/search?q=${encodeURIComponent(q)}`);
-    if ($("storeSearch").value.trim() === q) { searchResults = results; renderStores(); }
+    try {
+      const results = await api("GET", `/api/stores/search?q=${encodeURIComponent(q)}`);
+      if ($("storeSearch").value.trim() === q) { searchResults = results; renderStores(); }
+    } catch (err) { showError(err); }
   }, 350);
 });
 
 setLang(lang);
-load().catch((err) => { $("dealsList").innerHTML = `<div class="error">${esc(err.message)}</div>`; });
+load().catch(showError);
 </script>
 </body>
 </html>
