@@ -3,3 +3,4 @@ __pycache__/
 seen_deals.json
 favourites.json
 .pytest_cache/
+access_key.txt

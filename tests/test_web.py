@@ -98,6 +98,7 @@ def client(monkeypatch):
     monkeypatch.setattr(web, "stores_in_city", lambda city: (cities.get(city.lower(), []), []))
     cache, fetch, _ = make_cache()
     monkeypatch.setattr(web, "prices", cache)
+    monkeypatch.setattr(web, "ACCESS_KEY", "")  # the access key has its own tests below
     return web.app.test_client(), cache
 
 
@@ -129,3 +130,35 @@ def test_unknown_city_is_reported(client):
 def test_missing_city_falls_back_to_config(client):
     http, _ = client
     assert http.post("/api/state", json={}).json["city"] == web.config["stores"]["city"]
+
+
+def test_access_key_locks_out_visitors_without_the_link(client, monkeypatch):
+    http, _ = client
+    monkeypatch.setattr(web, "ACCESS_KEY", "s3cret-key")
+    for path in ("/", "/static/index.html"):
+        page = http.get(path)
+        assert page.status_code == 401 and b"personal link" in page.data
+    assert http.post("/api/state", json={}).status_code == 401
+    assert http.get("/api/stores/search?q=Prisma").status_code == 401
+    assert http.get("/?key=wrong").status_code == 401
+
+
+def test_link_with_access_key_lets_the_browser_in(client, monkeypatch):
+    http, _ = client
+    monkeypatch.setattr(web, "ACCESS_KEY", "s3cret-key")
+    first = http.get("/?key=s3cret-key")
+    assert first.status_code == 302 and first.headers["Location"] == "/"  # key removed from the address bar
+    assert "irtokarkki_key=s3cret-key" in first.headers["Set-Cookie"] and "HttpOnly" in first.headers["Set-Cookie"]
+    # The browser now has the cookie: the plain address and the API work.
+    assert http.get("/").status_code == 200
+    assert http.post("/api/state", json={"city": "Turku"}).status_code == 200
+
+
+def test_access_key_is_read_from_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("IRTOKARKKI_ACCESS_KEY", raising=False)
+    monkeypatch.setattr(web, "ACCESS_KEY_PATH", tmp_path / "access_key.txt")
+    assert web.load_access_key() == ""
+    (tmp_path / "access_key.txt").write_text("from-file\n", encoding="utf-8")
+    assert web.load_access_key() == "from-file"
+    monkeypatch.setenv("IRTOKARKKI_ACCESS_KEY", "from-env")
+    assert web.load_access_key() == "from-env"

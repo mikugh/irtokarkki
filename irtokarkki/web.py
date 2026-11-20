@@ -6,16 +6,29 @@ Several people can use it at once. Each visitor's city and favourite stores live
 own browser and are sent with every request. Prices are cached per store and shared by
 everyone, so a store is checked at most once per `cache_hours` however many people look at it.
 """
+import hmac
 import os
 import threading
 import time
 from dataclasses import asdict
 from datetime import datetime
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, redirect, request, send_from_directory
 
-from .core import SOURCES, city_stores, fetch_prices, load_config, search_stores
+from .core import ROOT, SOURCES, city_stores, fetch_prices, load_config, search_stores
 from .models import Deal, Store
+
+ACCESS_KEY_PATH = ROOT / "access_key.txt"
+KEY_COOKIE = "irtokarkki_key"
+
+
+def load_access_key() -> str:
+    """The secret that visitors need in their link, from IRTOKARKKI_ACCESS_KEY or access_key.txt.
+    Empty means anyone who can reach the server may use it."""
+    key = os.environ.get("IRTOKARKKI_ACCESS_KEY", "")
+    if not key and ACCESS_KEY_PATH.exists():
+        key = ACCESS_KEY_PATH.read_text(encoding="utf-8")
+    return key.strip()
 
 app = Flask(__name__, static_folder="static")
 config = load_config()
@@ -26,6 +39,36 @@ RETRY_AFTER = 10 * 60  # don't retry a store that failed for this long
 CITY_MAX_AGE = 24 * 3600  # which stores are in a city rarely changes
 MAX_FAVOURITES = 30
 STORE_FIELDS = ("chain", "store_id", "name", "location", "map_url", "source", "location_sv")
+ACCESS_KEY = load_access_key()
+
+LOCKED_PAGE = """<!doctype html><html lang="fi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Irtokarkki</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f2f7;color:#2a1630;
+font:17px/1.5 system-ui,"Segoe UI",sans-serif;padding:24px}main{max-width:30em}h1{font-size:26px;margin:0 0 12px}
+p{margin:6px 0;color:#74627a}@media(prefers-color-scheme:dark){body{background:#1b1020;color:#f5edf6}p{color:#b5a4ba}}</style>
+</head><body><main><h1>Irtokarkki</h1>
+<p>Pyydä henkilökohtainen linkki palvelun ylläpitäjältä.</p>
+<p>Be den som driver tjänsten om din personliga länk.</p>
+<p>Ask the person who runs this for your personal link.</p></main></body></html>"""
+
+
+@app.before_request
+def require_access_key():
+    """With an access key set, only visitors who arrived through the link with ?key=... get in.
+    The key is then kept in a cookie, so the plain address and home-screen shortcuts keep working."""
+    if not ACCESS_KEY:
+        return None
+    given = request.args.get("key")
+    if given is not None and hmac.compare_digest(given.encode(), ACCESS_KEY.encode()):
+        # Drop the key from the address bar, so it isn't left in history or screenshots.
+        resp = redirect(request.path or "/")
+        resp.set_cookie(KEY_COOKIE, ACCESS_KEY, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
+        return resp
+    if hmac.compare_digest(request.cookies.get(KEY_COOKIE, "").encode(), ACCESS_KEY.encode()):
+        return None
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "This needs the personal link from the person who runs it."}), 401
+    return LOCKED_PAGE, 401, {"Content-Type": "text/html; charset=utf-8"}
 
 
 class PriceCache:

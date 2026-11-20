@@ -56,7 +56,20 @@ Start-Process "$PWD\.venv\Scripts\pythonw.exe" -ArgumentList "-m", "irtokarkki.w
   1. Install [Tailscale](https://tailscale.com/download) (`winget install Tailscale.Tailscale`) and sign in from its tray icon.
   2. Run `tailscale serve --bg 5000`. It prints the app's address, `https://<computer-name>.<your-tailnet>.ts.net`. The first time, it may print a link for turning on HTTPS for your tailnet.
   3. In the [admin console](https://login.tailscale.com/admin/machines), open this computer's ⋯ menu, choose **Share…** and invite people by email. They accept the invite, install Tailscale, and open the address. They can reach only this computer, not the rest of your network.
+- **Tailscale Funnel** (a public link, no app needed for visitors): after the Tailscale steps above, run `tailscale funnel --bg 5000` instead of `tailscale serve`. The same `https://…ts.net` address then works in any browser for anyone who has it. Run `tailscale funnel --https=443 off` to make it private again.
 - **Cloudflare Tunnel** (a public link, no app needed for visitors): install `cloudflared` and run `cloudflared tunnel --url http://localhost:5000`. It prints a `https://….trycloudflare.com` address anyone with the link can open. For a permanent address, set up a named tunnel with your own domain.
+
+With a public link, lock the app with an access key so only people you send the link to can use it. Create one with
+
+```
+.venv\Scripts\python -c "import secrets; open('access_key.txt', 'w').write(secrets.token_urlsafe(18))"
+```
+
+and restart the web UI. (The key can also come from the `IRTOKARKKI_ACCESS_KEY` environment variable; `access_key.txt` is kept out of git.) Then send people `https://<your address>/?key=<the key>`. Their first visit stores the key in their browser, so after that the plain address and home-screen shortcuts work. Anyone without it only sees a page asking for the link. To shut someone out, change the key, restart, and send the new link to everyone who should keep access. This copies your link to the clipboard (in PowerShell, from the project folder; replace the address with yours):
+
+```
+Set-Clipboard "https://desktop-7a3pi3k.tail868e29.ts.net/?key=$((Get-Content access_key.txt -Raw).Trim())"
+```
 
 Run it from a home connection rather than a cloud server if you can: k-ruoka.fi blocks many cloud servers' addresses. By default the server only listens on this computer; set `IRTOKARKKI_HOST=0.0.0.0` (and optionally `IRTOKARKKI_PORT`) to reach it from other devices on your home network.
 
