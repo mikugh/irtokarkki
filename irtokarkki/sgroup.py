@@ -18,6 +18,9 @@ BRAND_NAMES = {
     "prisma": "Prisma", "s-market": "S-market", "sale": "Sale",
     "alepa": "Alepa", "abc": "ABC", "food-market-herkku": "Food Market Herkku",
 }
+# Bigger stores have more candy in their catalog, so check them first when a city
+# has more stores than max_stores_per_chain. Unknown brands go last.
+BRAND_PRIORITY = ["Prisma", "S-market", "Food Market Herkku", "Sale", "Alepa", "ABC"]
 
 LOCATION_FIELDS = "location { address { street { default } postcode postcodeName { default sv } } coordinates { lat lon } }"
 
@@ -76,7 +79,11 @@ def finnish_city_name(city: str) -> str:
 def find_stores(city: str, limit: int) -> list[Store]:
     # The store search is fuzzy, so keep only stores actually in the requested city.
     in_city = [s for s in search_stores(city) if city.lower() in s.location.lower()]
-    return in_city[:limit]
+    # The API lists stores grouped by brand, small Sale shops first, so without this
+    # a big city's limit fills up with Sales and no Prisma gets checked.
+    def priority(store: Store) -> int:
+        return BRAND_PRIORITY.index(store.chain) if store.chain in BRAND_PRIORITY else len(BRAND_PRIORITY)
+    return sorted(in_city, key=priority)[:limit]
 
 
 def get_stores(store_ids: list[str]) -> list[Store]:

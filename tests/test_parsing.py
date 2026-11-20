@@ -1,4 +1,4 @@
-from irtokarkki import i18n, kesko
+from irtokarkki import i18n, kesko, sgroup
 from irtokarkki.core import matches
 from irtokarkki.models import Deal, Store
 
@@ -50,6 +50,19 @@ def test_k_product_without_offer_has_current_price():
     assert not deal.is_discounted
     assert deal.percent_off == 0
     assert kesko._deal_from_pricing(STORE, PRODUCT, {"libraryVersion": "x"}) is None
+
+
+def test_s_group_prefers_big_stores_in_city(monkeypatch):
+    # The API lists stores grouped by brand, small Sale shops first.
+    def s(chain, n, city="Turku"):
+        return Store(chain=chain, store_id=f"{chain}{n}", name=f"{chain} {n}",
+                     location=f"Katu 1, 20100 {city}", source="s_group")
+    results = ([s("ABC", 1, "Salo")] + [s("Sale", i) for i in range(5)]
+               + [s("Prisma", i) for i in range(2)] + [s("S-market", i) for i in range(2)])
+    monkeypatch.setattr(sgroup, "search_stores", lambda query: results)
+
+    picked = sgroup.find_stores("Turku", 5)
+    assert [p.store_id for p in picked] == ["Prisma0", "Prisma1", "S-market0", "S-market1", "Sale0"]
 
 
 def test_name_keyword_filter():
