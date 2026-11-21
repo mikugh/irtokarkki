@@ -119,3 +119,9 @@ def test_web_flyer_cache_refreshes_and_survives_errors(monkeypatch):
 
     clock.now += web.RETRY_AFTER
     assert cache.get()["error"] == "" and len(calls) == 3
+
+
+def test_flyer_matches_ignores_case_hyphens_and_spaces():
+    assert flyers.matches("5 90 Voim. la 21.11. Irto- makeiset kg", "irtomakeis")
+    assert flyers.matches("5 90 Voim. la 21.11. Irto- makeiset kg", "Irto Makeis")
+    assert not flyers.matches("Kotimaista kirjolohi", "irtomakeis")

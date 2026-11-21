@@ -125,13 +125,17 @@ def _normalise(text: str) -> str:
     return re.sub(r"[\s\-­]", "", text.lower())
 
 
+def matches(text: str, keyword: str) -> bool:
+    """Whether a flyer tile's text mentions `keyword` (case, spaces and hyphens ignored)."""
+    return _normalise(keyword) in _normalise(text)
+
+
 def find_offers(flyer: Flyer, pages: list[list[dict]], keywords: list[str]) -> list[FlyerOffer]:
-    wanted = [_normalise(k) for k in keywords]
     offers = []
     for words in pages:
         for tile in tiles(words):
             text = " ".join(w["word"] for w in tile)
-            if any(k in _normalise(text) for k in wanted):
+            if any(matches(text, k) for k in keywords):
                 price = re.match(r"(\d{1,3}) (\d{2})\b", text)  # flyers print 5,90 as big "5" and small "90"
                 offers.append(FlyerOffer(flyer, text, f"{price.group(1)},{price.group(2)}" if price else ""))
     return offers

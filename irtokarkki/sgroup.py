@@ -124,12 +124,31 @@ def translate(deals: list[Deal]) -> list[Deal]:
     ]
 
 
+ITEM_FIELDS = "id name priceUnit pricing { campaignPrice regularPrice campaignPriceValidUntil }"
+
+
+def _to_deal(store: Store, item: dict) -> Deal | None:
+    """A catalog item's current price in `store`, or None when it has no price there."""
+    pricing = item.get("pricing") or {}
+    campaign, regular = pricing.get("campaignPrice"), pricing.get("regularPrice")
+    if regular is None:
+        return None
+    on_sale = campaign is not None and campaign < regular
+    return Deal(
+        store=store,
+        product_id=item["id"],
+        product=item["name"],
+        original_price=regular,
+        discounted_price=campaign if on_sale else regular,
+        unit="kg" if item.get("priceUnit") == "KGM" else "kpl",
+        valid_until=(pricing.get("campaignPriceValidUntil") or "")[:10] if on_sale else "",
+    )
+
+
 def _find_prices_batch(stores: list[Store], term: str) -> list[Deal]:
     """Search several stores for `term` in one request (using GraphQL aliases) and return each item's price."""
-    product_fields = ("{ items { id name priceUnit pricing { campaignPrice regularPrice "
-                      "campaignPriceValidUntil } } }")
     parts = [
-        f's{i}: store(id: "{s.store_id}") {{ products(queryString: $term, limit: 50) {product_fields} }}'
+        f's{i}: store(id: "{s.store_id}") {{ products(queryString: $term, limit: 50) {{ items {{ {ITEM_FIELDS} }} }} }}'
         for i, s in enumerate(stores)
     ]
     data = _post("query($term: String!) { " + " ".join(parts) + " }", {"term": term})
@@ -137,19 +156,26 @@ def _find_prices_batch(stores: list[Store], term: str) -> list[Deal]:
     deals = []
     for i, store in enumerate(stores):
         items = (((data.get(f"s{i}") or {}).get("products")) or {}).get("items") or []
-        for item in items:
-            pricing = item.get("pricing") or {}
-            campaign, regular = pricing.get("campaignPrice"), pricing.get("regularPrice")
-            if regular is None:
-                continue
-            on_sale = campaign is not None and campaign < regular
-            deals.append(Deal(
-                store=store,
-                product_id=item["id"],
-                product=item["name"],
-                original_price=regular,
-                discounted_price=campaign if on_sale else regular,
-                unit="kg" if item.get("priceUnit") == "KGM" else "kpl",
-                valid_until=(pricing.get("campaignPriceValidUntil") or "")[:10] if on_sale else "",
-            ))
+        deals += [d for d in (_to_deal(store, item) for item in items) if d]
+    return deals
+
+
+def search_products(store: Store, query: str, limit: int = 20) -> list[Deal]:
+    """Products in one store's catalog matching `query`, with their current prices."""
+    return _find_prices_batch([store], query)[:limit]
+
+
+def lookup_products(stores: list[Store], eans: list[str]) -> list[Deal]:
+    """The current price of each product (by EAN) in each store that sells it."""
+    pairs = [(store, ean) for store in stores for ean in eans]
+    deals = []
+    for start in range(0, len(pairs), PRODUCTS_PER_REQUEST):
+        chunk = pairs[start:start + PRODUCTS_PER_REQUEST]
+        parts = [f'p{i}: product(id: "{ean}", storeId: "{store.store_id}") {{ {ITEM_FIELDS} }}'
+                 for i, (store, ean) in enumerate(chunk)]
+        data = _post("{ " + " ".join(parts) + " }")
+        for i, (store, _) in enumerate(chunk):
+            item = data.get(f"p{i}")
+            if item and (deal := _to_deal(store, item)):  # None: this store doesn't sell it
+                deals.append(deal)
     return deals
