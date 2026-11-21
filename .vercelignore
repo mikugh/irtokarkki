@@ -10,3 +10,4 @@ __pycache__/
 .env*
 .vercel/
 user_data.json
+ntfy_topic.txt

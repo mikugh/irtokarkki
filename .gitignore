@@ -9,3 +9,4 @@ access_key.txt
 .vercel
 .env*
 user_data.json
+ntfy_topic.txt
