@@ -1,12 +1,18 @@
 # Irtokarkki
 
-Checks Finnish supermarkets for discounted irtokarkki and notifies you about new deals.
-For each deal it shows the supermarket chain, store, location, original price, discounted price, discount % and how long the offer lasts.
+Keeps a list of what you usually buy in S-group stores (Prisma, S-market, Sale, Alepa, ABC) and tells you which of it is on sale right now: on a web page, and as a message on your phone every morning when something new goes on sale.
 
-It checks the S-group stores (Prisma, S-market, Sale, Alepa, ABC) via the s-kaupat.fi API.
-Other chains aren't supported.
+It started as a pick-and-mix (irtokarkki) deal finder, and pick-and-mix is still on the list by default.
 
-The online shop only sells packaged irtokarkki (bags and boxes), not the weighed pick-and-mix from the bins. To catch pick-and-mix sales too, the app also reads the weekly flyers that the regional S-group cooperative publishes on view.sok-julkaisut.fi and shows any offer that mentions pick-and-mix ("irtomakeiset", "irtokarkit", "irtonamujo"). By default it reads Turun Osuuskauppa's flyers (Turku area); change `library` in the `[flyers]` section of `config.toml` for another region. Sales that a single store only announces on social media still don't show up.
+## How it finds sales
+
+- **Online prices** (the s-kaupat.fi API) in your favourite stores. These include the chain's flyer campaigns for packaged products and each store's own sales.
+- **The cooperative's weekly flyers** on view.sok-julkaisut.fi, for things the online shop doesn't sell, like the weighed pick-and-mix from the bins. By default it reads Turun Osuuskauppa's flyers (Turku area); change `library` in the `[flyers]` section of `config.toml` for another region.
+
+A list item is either:
+
+- **an exact product**, picked from your favourite store's range: on sale when that product is; or
+- **a word** for "any brand will do", e.g. `kahvi` or `jauheliha`: anything on sale whose name contains the word counts. Type the start of a word, since Finnish endings vary: `irtokark` also finds "irtokarkit". If a word catches too much (`kahvi` also matches "kahvikeksi"), swap it for exact products. Turn on **Also in flyers** for words whose sales only show up in the flyers, like pick-and-mix.
 
 ## Setup
 
@@ -19,61 +25,57 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 ```
 
-Edit `config.toml` to choose your city (or specific stores), search words and notification settings.
-
 ## Web UI
 
 ```
 .venv\Scripts\python -m irtokarkki.web
 ```
 
-Then open http://localhost:5000. The page has two tabs:
+Then open http://localhost:5000. The page has three tabs:
 
-- **Discounts**: first any pick-and-mix offers in the flyers, with a link to the flyer. Then stores that have irtokarkki on sale, each with its deals (original price, sale price, % off, end date). Below them are the stores with no discount right now, with their current prices, and last the stores that don't sell irtokarkki online. Your favourite stores are listed first, and "★ Favourites only" hides the others.
-- **Stores**: tap ☆ to favourite the stores you usually go to. Search finds any S-group store in Finland, even outside your city. Favourite stores are always checked.
+- **On sale**: everything on your list that's on sale now, with the sale price, the normal price, the store (or the flyer, with a link to it) and when the sale ends. "Check now" checks again.
+- **My list**: add products or words, turn "Also in flyers" on or off for a word, and remove items with ✕. New lists start with the pick-and-mix words `irtokark`, `irtomakeis`, `irtonamu` and `irttari`.
+- **Stores**: search any S-group store in Finland and tap ☆ to make it a favourite. Your list is checked in your favourite stores.
 
-Use the FI / SV / EN switch in the top corner to change the language. The first time, the app picks your browser's language. City names work in Swedish too (e.g. "Åbo").
+Use the FI / SV / EN switch in the top corner to change the language.
 
-Your favourites and city are saved in your browser, so everyone using the same server has their own.
-(The command line tool has separate favourites in `favourites.json`, see below.)
+Your list and favourite stores are kept on the server, so they're the same on your phone and computer. Run locally, they're saved in `user_data.json` in the project folder (kept out of git). A check is reused for `cache_hours`, and "Check now" checks again once it's older than `min_refresh_minutes` (both in the `[web]` section of `config.toml`).
 
-Prices are cached per store and shared between everyone using the server: a store is checked again only when its prices are older than `cache_hours`, and "Check for deals" refetches prices older than `min_refresh_minutes` (both in the `[web]` section of `config.toml`).
+### Access key
 
-### Sharing with friends and family
-
-The web UI can serve several people at once. Keep it running on a computer that stays on (set Windows to never sleep while plugged in), then pick one of these to let others reach it.
-
-To start the web UI in the background whenever you log in to Windows, run this in PowerShell from the project folder. It adds a shortcut to your Startup folder; delete `Irtokarkki.lnk` there to undo it.
-
-```
-$s = (New-Object -ComObject WScript.Shell).CreateShortcut("$([Environment]::GetFolderPath('Startup'))\Irtokarkki.lnk")
-$s.TargetPath = "$PWD\.venv\Scripts\pythonw.exe"; $s.Arguments = "-m irtokarkki.web"; $s.WorkingDirectory = "$PWD"; $s.Save()
-Start-Process "$PWD\.venv\Scripts\pythonw.exe" -ArgumentList "-m", "irtokarkki.web" -WorkingDirectory $PWD
-```
-
-- **Tailscale** (private, invite-only):
-  1. Install [Tailscale](https://tailscale.com/download) (`winget install Tailscale.Tailscale`) and sign in from its tray icon.
-  2. Run `tailscale serve --bg 5000`. It prints the app's address, `https://<computer-name>.<your-tailnet>.ts.net`. The first time, it may print a link for turning on HTTPS for your tailnet.
-  3. In the [admin console](https://login.tailscale.com/admin/machines), open this computer's ⋯ menu, choose **Share…** and invite people by email. They accept the invite, install Tailscale, and open the address. They can reach only this computer, not the rest of your network.
-- **Tailscale Funnel** (a public link, no app needed for visitors): after the Tailscale steps above, run `tailscale funnel --bg 5000` instead of `tailscale serve`. The same `https://…ts.net` address then works in any browser for anyone who has it. Run `tailscale funnel --https=443 off` to make it private again.
-- **Cloudflare Tunnel** (a public link, no app needed for visitors): install `cloudflared` and run `cloudflared tunnel --url http://localhost:5000`. It prints a `https://….trycloudflare.com` address anyone with the link can open. For a permanent address, set up a named tunnel with your own domain.
-- **Vercel** (a public link, no computer of yours needs to stay on; free Hobby plan): `vercel.json` runs it in Stockholm, and `.vercelignore` keeps `access_key.txt` and other local files from being uploaded. The first time, run `npx vercel login`, then `npx vercel link --project irtokarkki` and `npx vercel env add IRTOKARKKI_ACCESS_KEY production --sensitive < access_key.txt`. Deploy with `npx vercel deploy --prod`. On Vercel, prices are fetched while the page waits instead of in the background, and the price cache is cleared whenever Vercel shuts the app down after a quiet spell, so the first visit after that takes a few seconds longer.
-
-With a public link, lock the app with an access key so only people you send the link to can use it. Create one with
+Lock the app with an access key so only you can use it. Create one with
 
 ```
 .venv\Scripts\python -c "import secrets; open('access_key.txt', 'w').write(secrets.token_urlsafe(18))"
 ```
 
-and restart the web UI. (The key can also come from the `IRTOKARKKI_ACCESS_KEY` environment variable; `access_key.txt` is kept out of git.) Then send people `https://<your address>/?key=<the key>`. Their first visit stores the key in their browser, so after that the plain address and home-screen shortcuts work. Anyone without it only sees a page asking for the link. To shut someone out, change the key, restart, and send the new link to everyone who should keep access. This copies your link to the clipboard (in PowerShell, from the project folder; replace the address with yours):
-
-```
-Set-Clipboard "https://desktop-7a3pi3k.tail868e29.ts.net/?key=$((Get-Content access_key.txt -Raw).Trim())"
-```
+and restart the web UI. (The key can also come from the `IRTOKARKKI_ACCESS_KEY` environment variable; `access_key.txt` is kept out of git.) Then open `https://<your address>/?key=<the key>` once on each device. The first visit stores the key in the browser, so after that the plain address and home-screen shortcuts work. Anyone without it only sees a page asking for the link.
 
 By default the server only listens on this computer; set `IRTOKARKKI_HOST=0.0.0.0` (and optionally `IRTOKARKKI_PORT`) to reach it from other devices on your home network.
 
+### Vercel
+
+Vercel runs the app for free (Hobby plan), with no computer of yours that needs to stay on. `vercel.json` runs it in Stockholm and schedules the daily check, and `.vercelignore` keeps `access_key.txt` and other local files from being uploaded.
+
+The first time:
+
+1. `npx vercel login`, then `npx vercel link --project irtokarkki`.
+2. Add a free **Upstash Redis** database to the project from the Vercel Marketplace (`npx vercel integration add upstash`). It stores your list, stores and which sales you've already been told about. Without it, the app answers "Storage isn't connected".
+3. Add the secrets as production environment variables, each read from a file or typed when asked, so they don't end up in your shell history:
+   - `npx vercel env add IRTOKARKKI_ACCESS_KEY production --sensitive < access_key.txt`
+   - `CRON_SECRET`: any long random text. Vercel sends it with the daily check, and the check refuses to run without it.
+   - `NTFY_TOPIC`: your ntfy topic (see Notifications below). Without it, the daily check runs but sends nothing.
+4. Deploy with `npx vercel deploy --prod`.
+
+The daily check runs once a morning around 07:00 Finnish time (Vercel picks the minute). It sends one message listing sales that are new since the last message, and nothing on days when nothing new went on sale.
+
+## Notifications
+
+Install the [ntfy](https://ntfy.sh) app on your phone and subscribe to a topic name that's hard to guess. Anyone who knows the topic name can read the messages, so treat it like a password. For the web app, put it in the `NTFY_TOPIC` environment variable on Vercel; for the command line tool, in `ntfy_topic` in `config.toml`.
+
 ## Command line
+
+The command line tool is the original pick-and-mix checker. It doesn't use the shopping list: it searches the words in the `[search]` section of `config.toml` in your city's stores and favourites.
 
 ```
 .venv\Scripts\python -m irtokarkki              # check once, notify about new deals
@@ -81,7 +83,7 @@ By default the server only listens on this computer; set `IRTOKARKKI_HOST=0.0.0.
 .venv\Scripts\python -m irtokarkki --no-notify  # only print the table
 ```
 
-You get a notification only for deals you haven't been notified about yet (tracked in `seen_deals.json`). Once you have favourite stores, you're only notified about deals in those (set `only_favourites = false` in `config.toml` to change this). Pick-and-mix offers from the flyers are always notified, since they apply to all of the cooperative's stores.
+Edit `config.toml` to choose your city (or specific stores), search words and notification settings. You get a notification only for deals you haven't been notified about yet (tracked in `seen_deals.json`). Once you have favourite stores, you're only notified about deals in those (set `only_favourites = false` in `config.toml` to change this). Pick-and-mix offers from the flyers are always notified, since they apply to all of the cooperative's stores.
 
 The command line favourites are listed in `favourites.json` in the project folder. Favourite stores are always checked, even outside your city. Store IDs are in the store URLs on s-kaupat.fi:
 
@@ -91,11 +93,7 @@ The command line favourites are listed in `favourites.json` in the project folde
 ]
 ```
 
-The command line output and notifications use the `language` setting in `config.toml` (`"fi"`, `"sv"` or `"en"`).
-
-Notifications:
-- **Desktop**: a Windows notification (on by default).
-- **Phone**: install the [ntfy](https://ntfy.sh) app, subscribe to a topic name that's hard to guess, and set `ntfy_topic` in `config.toml`.
+The command line output and notifications use the `language` setting in `config.toml` (`"fi"`, `"sv"` or `"en"`). Notifications go to the Windows desktop (on by default) and, with `ntfy_topic` set, to your phone.
 
 ### Run automatically with Windows Task Scheduler
 
@@ -107,8 +105,10 @@ schtasks /Create /SC DAILY /ST 09:00 /TN "Irtokarkki" /TR "cmd /c cd /d `"$PWD`"
 
 ## Limitations
 
-- Stores sell real pick-and-mix (the weighed bins) only in the shop, not online. The app finds pick-and-mix sales only when they're in the cooperative's flyers; a store's own sale announced on social media doesn't show up. Flyer offers are read from the flyer's text, so an offer is shown as it's printed, e.g. "Voim. la 21.11. Irtonamujo 3 kg/talous".
+- Only S-group stores. Other chains aren't supported.
+- Stores sell real pick-and-mix (the weighed bins) only in the shop, not online. Pick-and-mix sales are found only when they're in the cooperative's flyers; a store's own sale announced on social media doesn't show up. Flyer offers are read from the flyer's text, so an offer is shown as it's printed, e.g. "Voim. la 21.11. Irtonamujo 3 kg/talous", and has no end date of its own (the flyer's title has the dates).
 - The flyer library removes a flyer once it expires, so past sales can't be looked up.
+- Word matching is plain "contains", so a short word can catch unrelated products.
 - The s-kaupat.fi API and the flyer library are unofficial sources and may change without notice. This is meant for personal use, so please don't run checks more often than you need to.
 
 ## License
