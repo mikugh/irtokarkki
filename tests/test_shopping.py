@@ -113,3 +113,10 @@ def test_sale_keys_change_with_price_and_end_date(fakes):
     fakes.catalog[0] = Deal(HALINEN, JUHLA, "Paulig Juhla Mokka kahvi 500g", 8.89, 5.99, valid_until="2026-12-01")
     later = shopping.check_list(item, [HALINEN], "tok-ilmoitukset", {})[0][0].key
     assert len({first, cheaper, later}) == 3
+
+
+def test_parse_stores_accepts_only_numeric_ids():
+    good = {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen"}
+    bad = {"source": "s_group", "store_id": '1") { id } x: store(id: "2', "name": "x"}
+    assert [s.store_id for s in shopping.parse_stores([good, bad, good])] == ["603212622"]
+    assert len(shopping.parse_stores([{**good, "store_id": str(i)} for i in range(100)])) == shopping.MAX_STORES

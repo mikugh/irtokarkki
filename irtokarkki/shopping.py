@@ -62,7 +62,8 @@ def parse_stores(raw) -> list[Store]:
     """Favourite stores as sent by the page or kept in storage, ignoring anything malformed."""
     stores, seen = [], set()
     for item in raw if isinstance(raw, list) else []:
-        if not isinstance(item, dict) or item.get("source") not in SOURCES or not item.get("store_id"):
+        if (not isinstance(item, dict) or item.get("source") not in SOURCES
+                or not str(item.get("store_id") or "").isdigit()):  # ids go into the API query text
             continue
         store = Store(**{f: str(item.get(f) or "")[:200] for f in STORE_FIELDS})
         if store.key not in seen:

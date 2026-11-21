@@ -93,34 +93,6 @@ def test_offer_description_and_notification_line():
     assert body == "TOK Prisma 18.–22.11.: Voim. la 21.11. Irto- makeiset kg 5.90 €"
 
 
-def test_web_flyer_cache_refreshes_and_survives_errors(monkeypatch):
-    from irtokarkki import web
-    clock = type("Clock", (), {"now": 1_795_000_000.0})()  # Windows can't show times near 1970 in local time
-    calls = []
-
-    def fake_check(library, keywords, cache):
-        calls.append(library)
-        if len(calls) == 2:
-            raise RuntimeError("site down")
-        return [OFFER]
-
-    monkeypatch.setattr(flyers, "check", fake_check)
-    monkeypatch.setattr(flyers, "library_name", lambda library: "Turun Osuuskaupan edut ja kampanjat")
-    cache = web.FlyerCache("tok-ilmoitukset", ["irtomakeis"], clock=lambda: clock.now)
-
-    first = cache.get()
-    assert first["offers"][0]["price"] == "5,90" and first["error"] == ""
-    assert cache.get()["offers"] and len(calls) == 1  # fresh: not fetched again
-
-    clock.now += web.FLYER_MAX_AGE
-    failed = cache.get()
-    assert failed["error"] == "flyers: site down" and len(failed["offers"]) == 1  # keeps the last offers
-    assert cache.get() and len(calls) == 2  # waits before retrying
-
-    clock.now += web.RETRY_AFTER
-    assert cache.get()["error"] == "" and len(calls) == 3
-
-
 def test_flyer_matches_ignores_case_hyphens_and_spaces():
     assert flyers.matches("5 90 Voim. la 21.11. Irto- makeiset kg", "irtomakeis")
     assert flyers.matches("5 90 Voim. la 21.11. Irto- makeiset kg", "Irto Makeis")

@@ -1,158 +1,138 @@
-"""The web UI serves several people at once: shared price cache, per-visitor city and favourites."""
+"""The web API: the shopping list, favourite stores, sales and the daily cron, behind the access key."""
 import pytest
 
-from irtokarkki import web
+from irtokarkki import shopping, web
 from irtokarkki.models import Deal, Store
-from irtokarkki.web import RETRY_AFTER, PriceCache
+from irtokarkki.shopping import Sale
+from irtokarkki.storage import MemoryStorage, StorageNotConfigured
+
+HALINEN = {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen", "chain": "S-market",
+           "location": "Turku"}
+SALE = Sale("kahvi", "word", "Kulta Katriina 500g", 3.95, 5.29, "S-market Halinen", "https://x", "2026-11-22", "k1")
 
 
-def store(n, source="s_group", city="Turku"):
-    return Store(chain="Prisma", store_id=str(n), name=f"Prisma {n}", location=city, source=source)
-
-
-class FakeFetch:
-    """Stands in for the store APIs: every store has one product at 3 €."""
-
+class FakeCheck:
     def __init__(self):
-        self.calls = []
-        self.fail = set()
+        self.calls = 0
 
-    def __call__(self, stores):
-        self.calls.append(sorted(s.key for s in stores))
-        deals = [Deal(s, "p1", "Irttarit 400g", 3.0, 3.0) for s in stores if s.source not in self.fail]
-        return deals, [f"{src}: blocked" for src in self.fail], set(self.fail)
-
-
-class Clock:
-    now = 1_000_000.0
-
-    def __call__(self):
-        return self.now
-
-
-def make_cache():
-    fetch, clock = FakeFetch(), Clock()
-    return PriceCache(fetch, clock=clock, background=False), fetch, clock
-
-
-def test_visitors_share_cached_prices():
-    cache, fetch, clock = make_cache()
-    cache.request([store(1), store(2)])
-    assert cache.snapshot([store(1)])["loading"]
-    cache.run_once()
-    cache.request([store(1)])  # a second visitor looking at the same store
-    assert not cache.run_once()
-    assert fetch.calls == [["s_group:1", "s_group:2"]]
-    snap = cache.snapshot([store(1)])
-    assert snap["checked"] == {"s_group:1"} and len(snap["deals"]) == 1 and not snap["loading"]
-
-
-def test_old_prices_are_fetched_again():
-    cache, fetch, clock = make_cache()
-    cache.request([store(1)])
-    cache.run_once()
-    clock.now += 600
-    cache.request([store(1)], max_age=3600)
-    assert not cache.run_once()  # still fresh
-    cache.request([store(1)], max_age=300)  # "Check for deals" wants newer prices
-    assert cache.run_once()
-    assert len(fetch.calls) == 2
-
-
-def test_failed_chain_keeps_old_prices_and_waits_before_retrying():
-    cache, fetch, clock = make_cache()
-    cache.request([store(1)])
-    cache.run_once()
-    fetch.fail = {"s_group"}
-    clock.now += 4 * 3600
-    cache.request([store(1)])
-    cache.run_once()
-    snap = cache.snapshot([store(1)])
-    assert snap["errors"] == ["s_group: blocked"]
-    assert len(snap["deals"]) == 1  # the older prices are still shown
-
-    cache.request([store(1)])  # page polling right after the failure
-    assert not cache.run_once()
-    clock.now += RETRY_AFTER
-    fetch.fail = set()
-    cache.request([store(1)])
-    assert cache.run_once()
-    assert cache.snapshot([store(1)])["errors"] == []
-
-
-def test_parse_favourites_ignores_junk():
-    favs = web.parse_favourites([
-        {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen", "chain": "S-market"},
-        {"source": "k_group", "store_id": "N168", "name": "K-Citymarket Skanssi", "chain": "K-Citymarket"},
-        {"source": "evil", "store_id": "1"},
-        {"source": "s_group"},
-        "nope",
-    ])
-    assert [f.key for f in favs] == ["s_group:603212622"]  # other chains aren't supported
-    assert web.parse_favourites({"not": "a list"}) == []
-    assert len(web.parse_favourites([{"source": "s_group", "store_id": str(i)} for i in range(100)])) == web.MAX_FAVOURITES
+    def __call__(self, items, stores, library, flyer_pages):
+        self.calls += 1
+        return [SALE], []
 
 
 @pytest.fixture
-def client(monkeypatch):
-    cities = {"turku": [store(1), store(2)], "tampere": [store(3, city="Tampere")]}
-    monkeypatch.setattr(web, "stores_in_city", lambda city: (cities.get(city.lower(), []), []))
-    cache, fetch, _ = make_cache()
-    monkeypatch.setattr(web, "prices", cache)
+def fake_check(monkeypatch):
+    check = FakeCheck()
+    monkeypatch.setattr(shopping, "check_list", check)
+    return check
+
+
+@pytest.fixture
+def client(monkeypatch, fake_check):
+    store = MemoryStorage()
+    monkeypatch.setattr(web, "get_storage", lambda: store)
     monkeypatch.setattr(web, "ACCESS_KEY", "")  # the access key has its own tests below
-    return web.app.test_client(), cache
+    web.sales_cache.clear()
+    return web.app.test_client()
 
 
-def test_each_visitor_gets_their_own_city_and_favourites(client):
-    http, cache = client
-    tampere_fav = {"source": "s_group", "store_id": "3", "name": "Prisma 3", "chain": "Prisma", "location": "Tampere"}
-
-    first = http.post("/api/state", json={"city": "Turku", "favourites": [tampere_fav]}).json
-    assert first["loading"]
-    cache.run_once()
-    me = http.post("/api/state", json={"city": "Turku", "favourites": [tampere_fav]}).json
-    friend = http.post("/api/state", json={"city": "Tampere", "favourites": []}).json
-
-    assert me["city"] == "Turku" and not me["loading"]
-    assert {s["key"]: s["favourite"] for s in me["stores"]} == {
-        "s_group:1": False, "s_group:2": False, "s_group:3": True}
-    assert friend["city"] == "Tampere"
-    assert [(s["key"], s["favourite"], s["checked"]) for s in friend["stores"]] == [("s_group:3", False, True)]
-    assert {d["store_key"] for d in friend["deals"]} == {"s_group:3"}
+def test_list_round_trip_and_default(client):
+    assert client.get("/api/list").json["items"] == shopping.DEFAULT_LIST
+    saved = client.put("/api/list", json={"items": [{"type": "word", "text": "Kahvi"}, {"type": "word", "text": "ka"}]}).json
+    assert saved["items"] == [{"type": "word", "text": "kahvi", "flyers": False}]
+    assert client.get("/api/list").json == saved
+    assert client.put("/api/list", json={"items": []}).json["items"] == []
+    assert client.get("/api/list").json["items"] == []  # an emptied list stays empty
 
 
-def test_unknown_city_is_reported(client):
-    http, _ = client
-    assert http.post("/api/state", json={"city": "Turku"}).json["city_found"]
-    unknown = http.post("/api/state", json={"city": "Xyzzyvaara"}).json
-    assert not unknown["city_found"] and unknown["stores"] == []
+def test_favourites_round_trip_ignores_junk(client):
+    assert client.get("/api/favourites").json["stores"] == []
+    saved = client.put("/api/favourites", json={"stores": [HALINEN, {"source": "evil", "store_id": "1"}, "nope"]}).json
+    assert [s["key"] for s in saved["stores"]] == ["s_group:603212622"]
+    assert saved["stores"][0]["favourite"] is True
+    assert client.get("/api/favourites").json == saved
 
 
-def test_missing_city_falls_back_to_config(client):
-    http, _ = client
-    assert http.post("/api/state", json={}).json["city"] == web.config["stores"]["city"]
+def test_sales_are_cached_until_list_or_stores_change(client, fake_check):
+    client.put("/api/favourites", json={"stores": [HALINEN]})
+    first = client.post("/api/sales", json={}).json
+    assert first["sales"][0]["product"] == "Kulta Katriina 500g" and first["errors"] == []
+    assert first["items"] == len(shopping.DEFAULT_LIST) and first["stores"] == 1 and first["checked_at"]
+    client.post("/api/sales", json={})
+    assert fake_check.calls == 1
+    client.put("/api/list", json={"items": [{"type": "word", "text": "maito"}]})
+    client.post("/api/sales", json={})
+    assert fake_check.calls == 2
+
+
+def test_refresh_rechecks_only_after_the_short_wait(client, fake_check, monkeypatch):
+    now = [1_795_000_000.0]
+    monkeypatch.setattr(web, "clock", lambda: now[0])
+    client.post("/api/sales", json={})
+    client.post("/api/sales", json={"refresh": True})
+    assert fake_check.calls == 1
+    now[0] += web.REFRESH_AGE
+    client.post("/api/sales", json={"refresh": True})
+    assert fake_check.calls == 2
+
+
+def test_product_search_uses_the_first_favourite(client, monkeypatch):
+    seen = []
+
+    def fake_search(store, query, limit=20):
+        seen.append((store.store_id, query))
+        return [Deal(store, "6411300000494", "Juhla Mokka 500g", 8.89, 6.99)]
+    monkeypatch.setattr(web.sgroup, "search_products", fake_search)
+    assert client.get("/api/products/search?q=juhla").json == []  # no favourite stores yet
+    client.put("/api/favourites", json={"stores": [HALINEN]})
+    assert client.get("/api/products/search?q=j").json == []  # too short
+    found = client.get("/api/products/search?q=juhla").json
+    assert found == [{"ean": "6411300000494", "name": "Juhla Mokka 500g", "price": 6.99, "regular_price": 8.89, "unit": "kpl"}]
+    client.get("/api/products/search?q=juhla&store=999")
+    assert seen == [("603212622", "juhla"), ("999", "juhla")]
+
+
+def test_cron_needs_the_secret_and_skips_the_access_key(client, monkeypatch):
+    calls = []
+    monkeypatch.setattr(web.daily, "run", lambda storage, topic, server, library: calls.append((topic, library)) or {"sent": False})
+    monkeypatch.setattr(web, "ACCESS_KEY", "s3cret-key")
+    monkeypatch.setenv("CRON_SECRET", "cron-s3cret")
+    monkeypatch.setenv("NTFY_TOPIC", "my-topic")
+    assert client.get("/api/cron/daily").status_code == 401
+    assert client.get("/api/cron/daily", headers={"Authorization": "Bearer wrong"}).status_code == 401
+    ok = client.get("/api/cron/daily", headers={"Authorization": "Bearer cron-s3cret"})
+    assert ok.status_code == 200 and calls == [("my-topic", web.config["flyers"]["library"])]
+    assert client.get("/api/list").status_code == 401  # everything else still needs the key
+    monkeypatch.delenv("CRON_SECRET")
+    assert client.get("/api/cron/daily", headers={"Authorization": "Bearer "}).status_code == 401
+
+
+def test_storage_not_connected_gives_503(client, monkeypatch):
+    def broken():
+        raise StorageNotConfigured("Storage isn't connected: add Upstash Redis to the Vercel project.")
+    monkeypatch.setattr(web, "get_storage", broken)
+    for resp in (client.get("/api/list"), client.post("/api/sales", json={}), client.get("/api/favourites")):
+        assert resp.status_code == 503 and "Upstash" in resp.json["error"]
 
 
 def test_access_key_locks_out_visitors_without_the_link(client, monkeypatch):
-    http, _ = client
     monkeypatch.setattr(web, "ACCESS_KEY", "s3cret-key")
     for path in ("/", "/static/index.html"):
-        page = http.get(path)
+        page = client.get(path)
         assert page.status_code == 401 and b"personal link" in page.data
-    assert http.post("/api/state", json={}).status_code == 401
-    assert http.get("/api/stores/search?q=Prisma").status_code == 401
-    assert http.get("/?key=wrong").status_code == 401
+    assert client.get("/api/list").status_code == 401
+    assert client.post("/api/sales", json={}).status_code == 401
+    assert client.get("/api/stores/search?q=Prisma").status_code == 401
+    assert client.get("/?key=wrong").status_code == 401
 
 
 def test_link_with_access_key_lets_the_browser_in(client, monkeypatch):
-    http, _ = client
     monkeypatch.setattr(web, "ACCESS_KEY", "s3cret-key")
-    first = http.get("/?key=s3cret-key")
+    first = client.get("/?key=s3cret-key")
     assert first.status_code == 302 and first.headers["Location"] == "/"  # key removed from the address bar
     assert "irtokarkki_key=s3cret-key" in first.headers["Set-Cookie"] and "HttpOnly" in first.headers["Set-Cookie"]
-    # The browser now has the cookie: the plain address and the API work.
-    assert http.get("/").status_code == 200
-    assert http.post("/api/state", json={"city": "Turku"}).status_code == 200
+    assert client.get("/").status_code == 200
+    assert client.get("/api/list").status_code == 200
 
 
 def test_access_key_is_read_from_file(tmp_path, monkeypatch):
