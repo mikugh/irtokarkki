@@ -5,6 +5,7 @@ Sales come from the favourite stores' online prices and, for words with "flyers"
 cooperative's flyers (pick-and-mix and other things the online shop doesn't sell).
 """
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -13,6 +14,7 @@ from .core import SOURCES
 from .models import Deal, Store
 
 MAX_ITEMS = 60  # keeps a check well inside Vercel's 300 s
+BUDGET = 240  # seconds; a check stops starting new lookups after this, so it ends before Vercel's 300 s
 MIN_WORD = 3  # shorter words would match nearly everything
 MAX_WORD = 40
 MAX_NAME = 120
@@ -42,7 +44,8 @@ def parse_items(raw) -> list[dict]:
             continue
         if item.get("type") == "word":
             text = " ".join(str(item.get("text") or "").split()).lower()
-            if not MIN_WORD <= len(text) <= MAX_WORD or ("word", text) in seen:
+            letters = re.sub(r"[\W_]", "", text)  # "- -" would otherwise match every flyer tile
+            if len(letters) < MIN_WORD or len(text) > MAX_WORD or ("word", text) in seen:
                 continue
             seen.add(("word", text))
             items.append({"type": "word", "text": text, "flyers": bool(item.get("flyers"))})
@@ -89,9 +92,10 @@ def _flyer_sale(word: str, offer: flyers.FlyerOffer) -> Sale:
 
 
 def check_list(items: list[dict], stores: list[Store], library: str,
-               flyer_pages: dict) -> tuple[list[Sale], list[str]]:
+               flyer_pages: dict, budget: float = BUDGET) -> tuple[list[Sale], list[str]]:
     """Every item on the list that's on sale in `stores` or the flyers, and any error messages.
     `flyer_pages` caches each flyer's text between checks (a published flyer doesn't change)."""
+    deadline = time.monotonic() + budget
     products = [i for i in items if i["type"] == "product"]
     words = [i for i in items if i["type"] == "word"]
     by_item: dict[int, list[Sale]] = {}
@@ -102,7 +106,7 @@ def check_list(items: list[dict], stores: list[Store], library: str,
     if products and stores:
         try:
             names = {p["ean"]: p["name"] for p in products}
-            for deal in sgroup.lookup_products(stores, list(names)):
+            for deal in sgroup.lookup_products(stores, list(names), deadline=deadline):
                 found_products.add((deal.product_id, deal.store.store_id))
                 if deal.is_discounted:
                     by_item.setdefault(items.index(next(p for p in products if p["ean"] == deal.product_id)), []).append(
@@ -113,7 +117,7 @@ def check_list(items: list[dict], stores: list[Store], library: str,
 
     if words and stores and not store_failed:
         with ThreadPoolExecutor(4) as pool:
-            results = list(pool.map(lambda w: _search(stores, w["text"]), words))
+            results = list(pool.map(lambda w: _search(stores, w["text"], deadline), words))
         for word, (deals, error) in zip(words, results):
             if error:
                 if not store_failed:
@@ -126,7 +130,9 @@ def check_list(items: list[dict], stores: list[Store], library: str,
                     by_item.setdefault(items.index(word), []).append(_store_sale(word["text"], "word", deal))
 
     flyer_words = [w for w in words if w["flyers"]]
-    if flyer_words:
+    if flyer_words and time.monotonic() >= deadline:
+        errors.append("flyers: timed out")
+    elif flyer_words:
         try:
             offers = flyers.check(library, [w["text"] for w in flyer_words], flyer_pages)
             for word in flyer_words:
@@ -141,7 +147,9 @@ def check_list(items: list[dict], stores: list[Store], library: str,
     return sales, errors
 
 
-def _search(stores: list[Store], word: str) -> tuple[list[Deal], str]:
+def _search(stores: list[Store], word: str, deadline: float) -> tuple[list[Deal], str]:
+    if time.monotonic() >= deadline:
+        return [], "timed out"
     try:
         return sgroup.find_prices(stores, word), ""
     except Exception as e:

@@ -1,4 +1,5 @@
 """S-group stores (Prisma, S-market, Sale, Alepa, ABC) via the public S-kaupat GraphQL API."""
+import time
 from dataclasses import replace
 
 import requests
@@ -165,11 +166,13 @@ def search_products(store: Store, query: str, limit: int = 20) -> list[Deal]:
     return _find_prices_batch([store], query)[:limit]
 
 
-def lookup_products(stores: list[Store], eans: list[str]) -> list[Deal]:
+def lookup_products(stores: list[Store], eans: list[str], deadline: float | None = None) -> list[Deal]:
     """The current price of each product (by EAN) in each store that sells it."""
     pairs = [(store, ean) for store in stores for ean in eans]
     deals = []
     for start in range(0, len(pairs), PRODUCTS_PER_REQUEST):
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError("timed out")
         chunk = pairs[start:start + PRODUCTS_PER_REQUEST]
         parts = [f'p{i}: product(id: "{ean}", storeId: "{store.store_id}") {{ {ITEM_FIELDS} }}'
                  for i, (store, ean) in enumerate(chunk)]

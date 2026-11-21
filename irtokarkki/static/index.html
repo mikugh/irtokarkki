@@ -497,11 +497,13 @@ async function api(method, url, body) {
   return res.json();
 }
 
+let errorMessage = "";  // the last failed request; kept until a check succeeds
 function showError(err) {
-  $("errors").innerHTML = `<div class="error">${esc(err.message)}</div>`;
+  errorMessage = err.message;
+  render();
 }
 
-// Quick edits start overlapping checks; only the latest one's answer counts.
+// Quick edits could start overlapping checks; only the latest one's answer counts.
 let checkId = 0;
 async function checkSales(refresh = false) {
   const id = ++checkId;
@@ -509,26 +511,45 @@ async function checkSales(refresh = false) {
   render();
   try {
     const result = await api("POST", "/api/sales", { refresh });
-    if (id === checkId) sales = result;
+    if (id === checkId) { sales = result; errorMessage = ""; }
   } finally {
     if (id === checkId) { checking = false; render(); }
   }
 }
 
-async function saveList(next) {
-  items = next;
+// After edits, check once things have settled, not once per tap: each check asks every store about the whole list.
+let checkTimer;
+function checkSoon() {
+  clearTimeout(checkTimer);
+  checking = true;
   render();
-  items = (await api("PUT", "/api/list", { items })).items;
-  render();
-  await checkSales();
+  checkTimer = setTimeout(() => checkSales().catch(showError), 1500);
 }
 
-async function saveStores(next) {
+// Saves go to the server one at a time, each with the newest list, so a quick add-then-remove can't arrive out of order.
+let saving = Promise.resolve();
+const latestSave = {};
+function save(url, field, body, apply) {
+  const seq = latestSave[url] = (latestSave[url] || 0) + 1;
+  const run = async () => {
+    const result = await api("PUT", url, body());
+    if (seq === latestSave[url]) { apply(result[field]); render(); }  // an older answer must not undo a newer edit
+  };
+  saving = saving.then(run, run);
+  return saving.then(checkSoon);
+}
+
+function saveList(next) {
+  items = next;
+  render();
+  return save("/api/list", "items", () => ({ items }), (saved) => { items = saved; });
+}
+
+function saveStores(next) {
   stores = next;
   render();
-  stores = (await api("PUT", "/api/favourites", { stores: stores.map((s) => Object.fromEntries(STORE_FIELDS.map((f) => [f, s[f] ?? ""]))) })).stores;
-  render();
-  await checkSales();
+  const body = () => ({ stores: stores.map((s) => Object.fromEntries(STORE_FIELDS.map((f) => [f, s[f] ?? ""]))) });
+  return save("/api/favourites", "stores", body, (saved) => { stores = saved; });
 }
 
 // Favourites used to live in the browser. Move them to the server once.
@@ -557,7 +578,8 @@ function render() {
   $("logo").classList.toggle("busy", checking);
   $("status").textContent = checking ? t("checking") : sales && sales.checked_at ? t("updated", { time: fmtDateTime(sales.checked_at) }) : "";
   $("refreshBtn").disabled = checking || !ready;
-  $("errors").innerHTML = ((sales && sales.errors) || []).map((e) => `<div class="error">${t("error", { e: esc(e) })}</div>`).join("");
+  $("errors").innerHTML = ((sales && sales.errors) || []).map((e) => `<div class="error">${t("error", { e: esc(e) })}</div>`).join("")
+    + (errorMessage ? `<div class="error">${esc(errorMessage)}</div>` : "");
   $("salesCount").textContent = saleList().length;
   $("listCount").textContent = items.length;
   $("favCount").innerHTML = `${stores.length}${ICONS.star}`;

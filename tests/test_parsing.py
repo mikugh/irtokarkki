@@ -67,3 +67,13 @@ def test_search_products_returns_current_prices(monkeypatch):
     monkeypatch.setattr(sgroup, "_post", lambda q, v=None, lang=None: {"s0": {"products": {"items": items}}})
     found = sgroup.search_products(STORE, "kahvi", limit=20)
     assert len(found) == 20 and found[0].product == "kahvi 0" and not found[0].is_discounted
+
+
+def test_lookup_products_stops_at_the_deadline(monkeypatch):
+    import time
+    import pytest
+    calls = []
+    monkeypatch.setattr(sgroup, "_post", lambda q, v=None, lang=None: calls.append(q) or {})
+    with pytest.raises(TimeoutError):
+        sgroup.lookup_products([STORE], [str(i).zfill(13) for i in range(50)], deadline=time.monotonic() - 1)
+    assert calls == []

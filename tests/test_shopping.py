@@ -20,7 +20,7 @@ class Fakes:
             Deal(HALINEN, "6430", "Fazer Remix Irttarit karkkipussi 400g", 3.69, 2.99, valid_until="2026-11-30"),
         ]
 
-    def lookup(self, stores, eans):
+    def lookup(self, stores, eans, deadline=None):
         return [d for d in self.catalog if d.product_id in eans and d.store in stores]
 
     def find_prices(self, stores, term):
@@ -120,3 +120,23 @@ def test_parse_stores_accepts_only_numeric_ids():
     bad = {"source": "s_group", "store_id": '1") { id } x: store(id: "2', "name": "x"}
     assert [s.store_id for s in shopping.parse_stores([good, bad, good])] == ["603212622"]
     assert len(shopping.parse_stores([{**good, "store_id": str(i)} for i in range(100)])) == shopping.MAX_STORES
+
+
+def test_words_need_three_letters_or_digits():
+    assert shopping.parse_items([{"type": "word", "text": "- -"}, {"type": "word", "text": "a b"},
+                                 {"type": "word", "text": "--x"}]) == []
+    assert shopping.parse_items([{"type": "word", "text": "irto-k"}])[0]["text"] == "irto-k"
+
+
+def test_check_stops_at_the_deadline(fakes, monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(shopping.time, "monotonic", lambda: now[0])
+
+    def slow_find(stores, term):
+        now[0] += 60  # each word search takes a minute
+        return fakes.find_prices(stores, term)
+    monkeypatch.setattr(sgroup, "find_prices", slow_find)
+    words = [{"type": "word", "text": f"kahvi{i}", "flyers": False} for i in range(10)]
+    sales, errors = shopping.check_list(words, [HALINEN], "tok-ilmoitukset", {}, budget=150)
+    assert errors == ["s_group: timed out"]
+    assert now[0] <= 100 + 150 + 60 * 4  # stops starting searches once the budget is spent (4 threads in flight)
