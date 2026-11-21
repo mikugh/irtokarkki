@@ -4,12 +4,12 @@ import tomllib
 from dataclasses import asdict
 from pathlib import Path
 
-from . import kesko, sgroup
+from . import sgroup
 from .models import Deal, Store
 
 ROOT = Path(__file__).resolve().parent.parent
 FAVOURITES_PATH = ROOT / "favourites.json"
-SOURCES = {"s_group": sgroup, "k_group": kesko}
+SOURCES = {"s_group": sgroup}
 
 
 def load_config(path: Path = ROOT / "config.toml") -> dict:
@@ -39,7 +39,7 @@ def matches(deal: Deal, keywords: list[str]) -> bool:
 
 
 def search_stores(query: str) -> list[Store]:
-    """Search stores from all chains by name or city."""
+    """Search stores by name or city."""
     stores = []
     for source in SOURCES.values():
         try:

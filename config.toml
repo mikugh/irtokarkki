@@ -3,7 +3,7 @@
 language = "fi"
 
 [stores]
-# Stores in this city are checked for both chains.
+# S-group stores in this city are checked.
 city = "Turku"
 max_stores_per_chain = 10
 
@@ -11,11 +11,6 @@ max_stores_per_chain = 10
 enabled = true
 # Optional: check only these stores instead of searching by city.
 # IDs are in the store URLs on s-kaupat.fi, e.g. "603212622" = S-market Halinen.
-store_ids = []
-
-[stores.k_group]   # K-Citymarket, K-Supermarket, K-Market
-enabled = true
-# Optional, e.g. ["N168"] = K-Citymarket Turku Skanssi (from k-ruoka.fi store URLs).
 store_ids = []
 
 [search]

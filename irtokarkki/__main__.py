@@ -26,7 +26,7 @@ def print_table(deals: list[Deal], lang: str) -> None:
     rows = [[
         d.store.chain, d.store.name, d.store.location_in(lang), d.product_in(lang),
         i18n.price(d.original_price, lang), i18n.price(d.discounted_price, lang), f"-{d.percent_off} %",
-        i18n.date(d.valid_until, lang), i18n.note(d, lang),
+        i18n.date(d.valid_until, lang),
     ] for d in deals]
     print(tabulate(rows, headers=i18n.t(lang, "headers"), tablefmt="github"))
 

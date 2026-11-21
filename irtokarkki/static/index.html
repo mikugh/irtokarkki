@@ -24,7 +24,6 @@
     --lemon: #ffd84a;
     --on-lemon: #2a1630;
     --s-group: #0b7a3e;
-    --k-group: #dd560c;
     --on-mark: #ffffff;
     --lift: 0 1px 0 rgba(42, 22, 48, .04), 0 18px 40px -22px rgba(42, 22, 48, .35);
     --display: "Unbounded", "Segoe UI", system-ui, sans-serif;
@@ -43,7 +42,6 @@
       --on-raspberry: #1b1020;
       --raspberry-soft: #42192d;
       --s-group: #43c47f;
-      --k-group: #ff8a3d;
       --on-mark: #1b1020;
       --lift: none;
     }
@@ -159,7 +157,6 @@
     font: 600 14px/1 var(--display); color: var(--on-mark);
   }
   .mark.s_group { background: var(--s-group); }
-  .mark.k_group { background: var(--k-group); }
   .store-info { flex: 1; min-width: 0; }
   .store-name { margin: 0; font-size: 17px; font-weight: 650; line-height: 1.3; }
   .store-loc { color: var(--muted); font-size: 14px; margin-top: 1px; }
@@ -189,7 +186,6 @@
   .store-head + .store-body .deal:first-child { margin-top: 12px; }
   .deal-name { font-weight: 600; font-size: 16px; }
   .deal-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; color: var(--muted); font-size: 14px; }
-  .note { background: var(--surface-2); color: var(--ink); border-radius: 6px; padding: 0 8px; font-size: 13px; font-weight: 600; }
 
   .price-tag { position: relative; flex: none; margin-right: 10px; }
   .tag {
@@ -324,7 +320,7 @@ const STRINGS = {
     checking: "Tarkistetaan kauppoja…", updated: "Tarkistettu {n} kauppaa {time}", updatedOne: "Tarkistettu 1 kauppa {time}",
     error: "Joitakin kauppoja ei voitu tarkistaa: {e}",
     addFav: "Lisää suosikkeihin", removeFav: "Poista suosikeista", map: "Kartta",
-    until: "Voimassa {date} asti", batch: "{n} kpl / {price}",
+    until: "Voimassa {date} asti",
     noFavsYet: "Et ole vielä valinnut suosikkikauppoja. Merkitse kauppoja tähdellä Kaupat-välilehdellä.",
     storesNoDiscount: "Kaupat ilman alennusta", storesNoProducts: "Ei irtokarkkia verkkovalikoimassa",
     checkingShort: "tarkistetaan…", dealsOne: "1 tarjous", dealsMany: "{n} tarjousta", noDealsShort: "ei tarjouksia",
@@ -343,7 +339,7 @@ const STRINGS = {
     checking: "Kontrollerar butiker…", updated: "Kontrollerade {n} butiker {time}", updatedOne: "Kontrollerade 1 butik {time}",
     error: "Vissa butiker kunde inte kontrolleras: {e}",
     addFav: "Lägg till bland favoriter", removeFav: "Ta bort från favoriter", map: "Karta",
-    until: "Gäller till {date}", batch: "{n} st / {price}",
+    until: "Gäller till {date}",
     noFavsYet: "Du har inte valt några favoritbutiker ännu. Stjärnmärk butiker under fliken Butiker.",
     storesNoDiscount: "Butiker utan rabatt", storesNoProducts: "Inget lösgodis i nätsortimentet",
     checkingShort: "kontrolleras…", dealsOne: "1 erbjudande", dealsMany: "{n} erbjudanden", noDealsShort: "inga erbjudanden",
@@ -362,7 +358,7 @@ const STRINGS = {
     checking: "Checking stores…", updated: "Checked {n} stores on {time}", updatedOne: "Checked 1 store on {time}",
     error: "Couldn't check some stores: {e}",
     addFav: "Add to favourites", removeFav: "Remove from favourites", map: "Map",
-    until: "Until {date}", batch: "{n} pcs / {price}",
+    until: "Until {date}",
     noFavsYet: "You haven't picked any favourite stores yet. Star stores in the Stores tab.",
     storesNoDiscount: "Stores without a discount", storesNoProducts: "No irtokarkki in the online selection",
     checkingShort: "checking…", dealsOne: "1 deal", dealsMany: "{n} deals", noDealsShort: "no deals",
@@ -422,7 +418,8 @@ function readStored(key, fallback) {
 function writeStored(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
-let favourites = readStored("favourites", []);
+// Only S-group stores are supported; drop favourites saved when other chains were.
+let favourites = readStored("favourites", []).filter((f) => f.source === "s_group");
 let city = readStored("city", "");
 const isFavourite = (key) => favourites.some((f) => `${f.source}:${f.store_id}` === key);
 
@@ -461,7 +458,7 @@ function storeByKey() {
 const isShown = (store) => store && store.checked && (!favOnly || store.favourite);
 
 function mark(store) {
-  return `<span class="mark ${esc(store.source)}" title="${esc(store.chain)}" aria-hidden="true">${store.source === "k_group" ? "K" : "S"}</span>`;
+  return `<span class="mark ${esc(store.source)}" title="${esc(store.chain)}" aria-hidden="true">S</span>`;
 }
 
 function starButton(store) {
@@ -525,8 +522,6 @@ function discountRow(d) {
             <div class="deal-name">${esc(productName(d))}</div>
             <div class="deal-meta">
               ${d.valid_until ? `<span>${t("until", { date: fmtDate(d.valid_until) })}</span>` : ""}
-              ${d.batch_amount > 1 ? `<span class="note">${t("batch", { n: d.batch_amount, price: euro(d.batch_price) })}</span>` : ""}
-              ${d.plussa ? `<span class="note">Plussa</span>` : ""}
             </div>
           </div>
           <div class="price-tag">

@@ -3,11 +3,8 @@
 Checks Finnish supermarkets for discounted irtokarkki and notifies you about new deals.
 For each deal it shows the supermarket chain, store, location, original price, discounted price, discount % and how long the offer lasts.
 
-Supported chains:
-- **S-group**: Prisma, S-market, Sale, Alepa, ABC (via the s-kaupat.fi API)
-- **K-group**: K-Citymarket, K-Supermarket, K-Market (via the k-ruoka.fi API)
-
-Lidl isn't supported because it doesn't publish prices per store online.
+It checks the S-group stores (Prisma, S-market, Sale, Alepa, ABC) via the s-kaupat.fi API.
+Other chains aren't supported.
 
 ## Setup
 
@@ -31,7 +28,7 @@ Edit `config.toml` to choose your city (or specific stores), search words and no
 Then open http://localhost:5000. The page has two tabs:
 
 - **Discounts**: stores that have irtokarkki on sale, each with its deals (original price, sale price, % off, end date). Below them are the stores with no discount right now, with their current prices, and last the stores that don't sell irtokarkki online. Your favourite stores are listed first, and "★ Favourites only" hides the others.
-- **Stores**: tap ☆ to favourite the stores you usually go to. Search finds any S-group or K-group store in Finland, even outside your city. Favourite stores are always checked.
+- **Stores**: tap ☆ to favourite the stores you usually go to. Search finds any S-group store in Finland, even outside your city. Favourite stores are always checked.
 
 Use the FI / SV / EN switch in the top corner to change the language. The first time, the app picks your browser's language. City names work in Swedish too (e.g. "Åbo").
 
@@ -71,7 +68,7 @@ and restart the web UI. (The key can also come from the `IRTOKARKKI_ACCESS_KEY` 
 Set-Clipboard "https://desktop-7a3pi3k.tail868e29.ts.net/?key=$((Get-Content access_key.txt -Raw).Trim())"
 ```
 
-Run it from a home connection rather than a cloud server if you can: k-ruoka.fi blocks many cloud servers' addresses. By default the server only listens on this computer; set `IRTOKARKKI_HOST=0.0.0.0` (and optionally `IRTOKARKKI_PORT`) to reach it from other devices on your home network.
+By default the server only listens on this computer; set `IRTOKARKKI_HOST=0.0.0.0` (and optionally `IRTOKARKKI_PORT`) to reach it from other devices on your home network.
 
 ## Command line
 
@@ -83,12 +80,11 @@ Run it from a home connection rather than a cloud server if you can: k-ruoka.fi 
 
 You get a notification only for deals you haven't been notified about yet (tracked in `seen_deals.json`). Once you have favourite stores, you're only notified about deals in those (set `only_favourites = false` in `config.toml` to change this).
 
-The command line favourites are listed in `favourites.json` in the project folder. Favourite stores are always checked, even outside your city. Store IDs are in the store URLs on s-kaupat.fi and k-ruoka.fi:
+The command line favourites are listed in `favourites.json` in the project folder. Favourite stores are always checked, even outside your city. Store IDs are in the store URLs on s-kaupat.fi:
 
 ```json
 [
- {"source": "s_group", "store_id": "603212622", "chain": "S-market", "name": "S-market Halinen", "location": "Turku"},
- {"source": "k_group", "store_id": "N168", "chain": "K-Citymarket", "name": "K-Citymarket Turku Skanssi", "location": "Turku"}
+ {"source": "s_group", "store_id": "603212622", "chain": "S-market", "name": "S-market Halinen", "location": "Turku"}
 ]
 ```
 
@@ -109,8 +105,7 @@ schtasks /Create /SC DAILY /ST 09:00 /TN "Irtokarkki" /TR "cmd /c cd /d `"$PWD`"
 ## Limitations
 
 - Stores sell real pick-and-mix (the weighed bins) only in the shop, not online. Store-wide campaigns like "irtomakeiset -30%" therefore don't show up. The app finds discounted packaged irtokarkki products listed in the online catalogs.
-- K-group prices marked "Plussa" require a K-Plussa card. "2 kpl / 4.50 €" offers are shown as the price per item.
-- Both APIs are unofficial and may change without notice. This is meant for personal use, so please don't run checks more often than you need to.
+- The s-kaupat.fi API is unofficial and may change without notice. This is meant for personal use, so please don't run checks more often than you need to.
 
 ## License
 

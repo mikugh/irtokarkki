@@ -3,12 +3,12 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class Store:
-    chain: str  # e.g. "S-market", "K-Citymarket"
+    chain: str  # e.g. "Prisma", "S-market"
     store_id: str
     name: str
     location: str  # street address and/or city
     map_url: str = ""
-    source: str = ""  # "s_group" or "k_group"
+    source: str = ""  # "s_group"
     location_sv: str = ""  # Swedish version of `location`, when the store provides one
 
     @property
@@ -29,9 +29,6 @@ class Deal:
     discounted_price: float  # current price per item; same as original_price when not on sale
     unit: str = "kpl"
     valid_until: str = ""  # ISO date, if known
-    batch_amount: int = 1  # multi-buy offers, e.g. 2 for `batch_price`
-    batch_price: float = 0.0
-    plussa: bool = False  # needs a K-Plussa card
     product_names: dict = field(default_factory=dict, compare=False)  # {"sv": ..., "en": ...}
 
     def product_in(self, lang: str) -> str:

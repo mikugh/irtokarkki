@@ -82,12 +82,13 @@ def test_failed_chain_keeps_old_prices_and_waits_before_retrying():
 
 def test_parse_favourites_ignores_junk():
     favs = web.parse_favourites([
+        {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen", "chain": "S-market"},
         {"source": "k_group", "store_id": "N168", "name": "K-Citymarket Skanssi", "chain": "K-Citymarket"},
         {"source": "evil", "store_id": "1"},
         {"source": "s_group"},
         "nope",
     ])
-    assert [f.key for f in favs] == ["k_group:N168"]
+    assert [f.key for f in favs] == ["s_group:603212622"]  # other chains aren't supported
     assert web.parse_favourites({"not": "a list"}) == []
     assert len(web.parse_favourites([{"source": "s_group", "store_id": str(i)} for i in range(100)])) == web.MAX_FAVOURITES
 
