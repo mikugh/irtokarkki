@@ -517,15 +517,6 @@ async function checkSales(refresh = false) {
   }
 }
 
-// After edits, check once things have settled, not once per tap: each check asks every store about the whole list.
-let checkTimer;
-function checkSoon() {
-  clearTimeout(checkTimer);
-  checking = true;
-  render();
-  checkTimer = setTimeout(() => checkSales().catch(showError), 1500);
-}
-
 // Saves go to the server one at a time, each with the newest list, so a quick add-then-remove can't arrive out of order.
 let saving = Promise.resolve();
 const latestSave = {};
@@ -536,7 +527,7 @@ function save(url, field, body, apply) {
     if (seq === latestSave[url]) { apply(result[field]); render(); }  // an older answer must not undo a newer edit
   };
   saving = saving.then(run, run);
-  return saving.then(checkSoon);
+  return saving;  // no check after an edit: the page checks when opened, on "Check now" and every morning
 }
 
 function saveList(next) {
@@ -562,7 +553,9 @@ async function moveOldFavourites() {
   try { localStorage.removeItem("favourites"); localStorage.removeItem("city"); localStorage.removeItem("favOnly"); } catch {}
 }
 
-const saleList = () => (sales && sales.sales) || [];
+// Sales of items removed since the last check aren't shown.
+const itemLabel = (it) => (it.type === "word" ? it.text : it.name);
+const saleList = () => ((sales && sales.sales) || []).filter((s) => items.some((it) => itemLabel(it) === s.item));
 
 function headline() {
   if (!ready || (checking && !sales)) return t("heroChecking");
