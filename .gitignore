@@ -5,3 +5,6 @@ favourites.json
 .pytest_cache/
 access_key.txt
 .claude/
+
+.vercel
+.env*

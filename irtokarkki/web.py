@@ -162,7 +162,10 @@ class PriceCache:
                     return
 
 
-prices = PriceCache(lambda stores: fetch_prices(config, stores))
+# Serverless hosts like Vercel may pause a function once it has answered, so a background
+# thread never finishes there. Fetch during the request instead.
+SERVERLESS = bool(os.environ.get("VERCEL"))
+prices = PriceCache(lambda stores: fetch_prices(config, stores), background=not SERVERLESS)
 _cities: dict[str, tuple[float, list[Store], list[str]]] = {}  # city (lowercase) -> (when, stores, errors)
 _cities_lock = threading.Lock()
 
@@ -220,6 +223,8 @@ def get_state():
     stores = list(stores.values())
 
     prices.request(stores, REFRESH_AGE if body.get("refresh") else MAX_AGE)
+    if SERVERLESS:
+        prices.run_once()
     snap = prices.snapshot(stores)
     favourite_keys = {f.key for f in favourites}
     updated = snap["updated_at"]
@@ -227,7 +232,7 @@ def get_state():
         "city": city,
         "city_found": bool(in_city) or bool(errors),  # False: no stores in this city, e.g. a typo
         "loading": snap["loading"],
-        "updated_at": datetime.fromtimestamp(updated).isoformat(timespec="minutes") if updated else None,
+        "updated_at": datetime.fromtimestamp(updated).astimezone().isoformat(timespec="minutes") if updated else None,
         "errors": errors + snap["errors"],
         "stores": [_store_json(s, favourite_keys, s.key in snap["checked"]) for s in stores],
         "deals": [_deal_json(d) for d in sorted(snap["deals"], key=lambda d: (d.discounted_price, d.store.name))],
