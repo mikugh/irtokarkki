@@ -8,3 +8,4 @@ access_key.txt
 
 .vercel
 .env*
+user_data.json
