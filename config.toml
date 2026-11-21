@@ -23,6 +23,17 @@ terms = ["irtokarkki", "irtokarkit", "irtomakeiset"]
 # to include candy bags, or set to [] to accept everything the search returns.
 name_keywords = ["irtokark", "irtomakeis", "irttari"]
 
+[flyers]
+# Pick-and-mix (the weighed bins) isn't sold online, so its sales only show up in the
+# weekly flyers. Each S-group cooperative publishes its flyers in a library on
+# view.sok-julkaisut.fi; this is the name in its address. "tok-ilmoitukset" is
+# Turun Osuuskauppa (Turku area). Other cooperatives link to theirs from their own site.
+enabled = true
+library = "tok-ilmoitukset"
+# An offer counts when its text contains one of these (case-insensitive, hyphens ignored).
+keywords = ["irtomakeis", "irtokark", "irtonamu"]
+cache_hours = 3   # the web UI checks the flyer list again after this
+
 [web]
 # The web UI caches each store's prices and shares them between everyone using it,
 # so the stores' sites aren't asked again for every visitor.

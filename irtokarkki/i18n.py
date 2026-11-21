@@ -9,6 +9,9 @@ STRINGS = {
         "title_one": "Irtokarkkia tarjouksessa! (1 uusi tarjous)",
         "title_many": "Irtokarkkia tarjouksessa! ({n} uutta tarjousta)",
         "headers": ["Ketju", "Kauppa", "Sijainti", "Tuote", "Normaalihinta", "Tarjoushinta", "Ale", "Voimassa"],
+        "flyers_title": "Irtomakeiset tarjouslehdissä ({source}):",
+        "flyers_none": "Ajankohtaisissa tarjouslehdissä ei ole irtomakeistarjouksia.",
+        "flyers_failed": "Tarjouslehtiä ei voitu tarkistaa: {e}",
     },
     "sv": {
         "checking": "Söker erbjudanden på lösgodis...",
@@ -17,6 +20,9 @@ STRINGS = {
         "title_one": "Lösgodis på rea! (1 nytt erbjudande)",
         "title_many": "Lösgodis på rea! ({n} nya erbjudanden)",
         "headers": ["Kedja", "Butik", "Plats", "Produkt", "Ordinarie pris", "Erbjudande", "Rabatt", "Gäller till"],
+        "flyers_title": "Lösgodis i reklambladen ({source}):",
+        "flyers_none": "De aktuella reklambladen har inga erbjudanden på lösgodis.",
+        "flyers_failed": "Reklambladen kunde inte kontrolleras: {e}",
     },
     "en": {
         "checking": "Checking for irtokarkki discounts...",
@@ -25,6 +31,9 @@ STRINGS = {
         "title_one": "Irtokarkki on sale! (1 new deal)",
         "title_many": "Irtokarkki on sale! ({n} new deals)",
         "headers": ["Chain", "Store", "Location", "Product", "Original", "Discounted", "Off", "Valid until"],
+        "flyers_title": "Pick-and-mix in the flyers ({source}):",
+        "flyers_none": "No pick-and-mix offers in the current flyers.",
+        "flyers_failed": "Couldn't check the flyers: {e}",
     },
 }
 

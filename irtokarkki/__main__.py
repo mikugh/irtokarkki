@@ -14,7 +14,7 @@ from pathlib import Path
 
 from tabulate import tabulate
 
-from . import i18n, notify
+from . import flyers, i18n, notify
 from .core import ROOT, collect, load_config, load_favourites
 from .models import Deal
 
@@ -31,6 +31,27 @@ def print_table(deals: list[Deal], lang: str) -> None:
     print(tabulate(rows, headers=i18n.t(lang, "headers"), tablefmt="github"))
 
 
+def check_flyers(config: dict, lang: str) -> list[flyers.FlyerOffer]:
+    """Pick-and-mix offers in the configured flyer library (the [flyers] section of config.toml)."""
+    cfg = config.get("flyers", {})
+    if not cfg.get("enabled", True):
+        return []
+    library = cfg.get("library", "tok-ilmoitukset")
+    try:
+        offers = flyers.check(library, cfg.get("keywords", ["irtomakeis", "irtokark", "irtonamu"]))
+    except Exception as e:
+        print(i18n.t(lang, "flyers_failed", e=e))
+        return []
+    print()
+    if offers:
+        print(i18n.t(lang, "flyers_title", source=library))
+        for offer in offers:
+            print(f"  {notify.flyer_line(offer, lang)}  {offer.flyer.url}")
+    else:
+        print(i18n.t(lang, "flyers_none"))
+    return offers
+
+
 def run_once(config: dict, send_notifications: bool) -> None:
     state_path = ROOT / "seen_deals.json"
     seen = set(json.loads(state_path.read_text())) if state_path.exists() else set()
@@ -41,6 +62,7 @@ def run_once(config: dict, send_notifications: bool) -> None:
     _, prices, _ = collect(config, favourites)
     deals = [p for p in prices if p.is_discounted]
     print_table(deals, lang)
+    flyer_offers = check_flyers(config, lang)
 
     if not send_notifications:
         return
@@ -48,16 +70,18 @@ def run_once(config: dict, send_notifications: bool) -> None:
     new = [d for d in deals if d.key not in seen]
     if favourites and config.get("notify", {}).get("only_favourites", True):
         new = [d for d in new if d.store.key in favourites]
-    if new:
+    # Flyer offers apply to all of the cooperative's stores, so they're never filtered by favourites.
+    new_flyer = [o for o in flyer_offers if o.key not in seen]
+    if new or new_flyer:
         notify_cfg = config.get("notify", {})
         if notify_cfg.get("desktop", True):
-            notify.desktop(new, lang)
+            notify.desktop(new, lang, new_flyer)
         if notify_cfg.get("ntfy_topic"):
-            notify.ntfy(new, notify_cfg["ntfy_topic"], notify_cfg.get("ntfy_server", "https://ntfy.sh"), lang)
-        print(i18n.t(lang, "notified", n=len(new)))
+            notify.ntfy(new, notify_cfg["ntfy_topic"], notify_cfg.get("ntfy_server", "https://ntfy.sh"), lang, new_flyer)
+        print(i18n.t(lang, "notified", n=len(new) + len(new_flyer)))
 
     # Only remember currently active deals, so a deal that ends and comes back is notified again.
-    state_path.write_text(json.dumps(sorted(d.key for d in deals), indent=1))
+    state_path.write_text(json.dumps(sorted([d.key for d in deals] + [o.key for o in flyer_offers]), indent=1))
 
 
 def main() -> None:

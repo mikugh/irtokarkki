@@ -230,6 +230,15 @@
   .deal-count { flex: none; font-size: 14px; font-weight: 700; color: var(--raspberry); white-space: nowrap; }
   .deal-count.none { color: var(--muted); font-weight: 500; }
 
+  /* Pick-and-mix offers found in the flyers */
+  .flyers { margin-bottom: 18px; }
+  .flyers h2 { margin-top: 0; }
+  .flyer-source { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+  .flyer-source a, .deal-meta a { color: inherit; text-underline-offset: 3px; }
+  .flyers .deal:first-of-type { border-top: none; padding-top: 8px; }
+  .flyers-none { color: var(--muted); font-size: 15px; margin: 0 0 22px; }
+  .flyers-none a { color: inherit; text-underline-offset: 3px; }
+
   .empty { margin: 8px 0 0; max-width: 46ch; color: var(--muted); font-size: 16px; }
   .quiet { color: var(--muted); font-size: 15px; margin: 10px 0 0; max-width: 56ch; }
   #storeSearch { padding-block: 9px; }
@@ -292,6 +301,7 @@
   </nav>
 
   <section id="dealsView">
+    <div id="flyerList"></div>
     <div class="filters">
       <button class="chip" id="favOnly"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.5 6 .9-4.35 4.25 1.03 6L12 17l-5.38 2.85 1.03-6L3.3 9.6l6-.9z"/></svg><span data-i18n="favOnly"></span></button>
     </div>
@@ -327,6 +337,8 @@ const STRINGS = {
     noStoresFound: "Kauppoja ei löytynyt.", favourites: "Suosikit",
     favHint: "Lisää kauppa suosikkeihin napauttamalla ☆. Suosikkikaupat tarkistetaan aina, myös muissa kaupungeissa.",
     storesIn: "Kaupat: {city}", loading: "Ladataan…", noOtherStores: "Ei muita kauppoja.", searching: "Haetaan…",
+    flyersTitle: "Irtomakeiset tarjouslehdissä", flyersSource: "Lähde: {source}", openFlyer: "Avaa lehti",
+    flyersNone: "Ajankohtaisissa tarjouslehdissä ei ole irtomakeistarjouksia.", seeFlyers: "Katso lehdet",
   },
   sv: {
     cityPlaceholder: "Stad, t.ex. Åbo", cityLabel: "Stad", check: "Sök erbjudanden",
@@ -346,6 +358,8 @@ const STRINGS = {
     noStoresFound: "Inga butiker hittades.", favourites: "Favoriter",
     favHint: "Tryck på ☆ för att lägga till en butik bland favoriterna. Favoritbutiker kontrolleras alltid, även i andra städer.",
     storesIn: "Butiker i {city}", loading: "Laddar…", noOtherStores: "Inga andra butiker.", searching: "Söker…",
+    flyersTitle: "Lösgodis i reklambladen", flyersSource: "Källa: {source}", openFlyer: "Öppna bladet",
+    flyersNone: "De aktuella reklambladen har inga erbjudanden på lösgodis.", seeFlyers: "Se bladen",
   },
   en: {
     cityPlaceholder: "City, e.g. Turku", cityLabel: "City", check: "Check for deals",
@@ -365,6 +379,8 @@ const STRINGS = {
     noStoresFound: "No stores found.", favourites: "Favourites",
     favHint: "Tap ☆ on a store to add it to your favourites. Favourite stores are always checked for deals, even in other cities.",
     storesIn: "Stores in {city}", loading: "Loading…", noOtherStores: "No other stores.", searching: "Searching…",
+    flyersTitle: "Pick-and-mix in the flyers", flyersSource: "Source: {source}", openFlyer: "Open flyer",
+    flyersNone: "No pick-and-mix offers in the current flyers.", seeFlyers: "See the flyers",
   },
 };
 const LOCALES = { fi: "fi-FI", sv: "sv-FI", en: "en-GB" };
@@ -405,6 +421,7 @@ function setLang(code) {
   render();
 }
 let state = { stores: [], deals: [], loading: true };
+let flyerState = null;  // pick-and-mix offers in the flyers, from /api/flyers
 let favOnly = false;
 try { favOnly = localStorage.getItem("favOnly") === "1"; } catch {}
 let searchResults = null;
@@ -477,7 +494,7 @@ const cityMissing = () => state.city_found === false;
 function headline(stores) {
   if (cityMissing()) return t("heroNoCity", { city: state.city });  // set as textContent, so no escaping needed
   if (state.loading && !state.updated_at) return t("heroChecking");
-  const n = state.deals.filter((d) => d.discounted && isShown(stores[d.store_key])).length;
+  const n = state.deals.filter((d) => d.discounted && isShown(stores[d.store_key])).length + flyerOffers().length;
   if (n === 0) return t(favOnly ? "heroNoneFav" : "heroNone");
   return n === 1 ? t("heroOne") : t("heroMany", { n });
 }
@@ -494,13 +511,46 @@ function render() {
     : state.updated_at ? t(checked === 1 ? "updatedOne" : "updated", { time: fmtDateTime(state.updated_at), n: checked }) : "";
   $("refreshBtn").disabled = !!state.loading;
   $("errors").innerHTML = (state.errors || []).map((e) => `<div class="error">${t("error", { e: esc(e) })}</div>`).join("");
-  $("dealsCount").textContent = state.deals.filter((d) => d.discounted).length;
+  $("dealsCount").textContent = state.deals.filter((d) => d.discounted).length + flyerOffers().length;
   $("favCount").innerHTML = `${favs.length}${ICONS.star}`;
   $("favOnly").classList.toggle("on", favOnly);
   $("favOnly").setAttribute("aria-pressed", String(favOnly));
 
+  renderFlyers();
   renderDeals(stores, favs);
   renderStores();
+}
+
+const flyerOffers = () => (flyerState && flyerState.offers) || [];
+
+function flyerRow(o) {
+  return `
+        <div class="deal">
+          <div>
+            <div class="deal-name">${esc(o.description)}</div>
+            <div class="deal-meta">
+              <a href="${esc(o.flyer_url)}" target="_blank" rel="noopener">${esc(o.flyer_title)} · ${t("openFlyer")}</a>
+            </div>
+          </div>
+          ${o.price ? `<div class="price-tag"><div class="tag"><span class="now">${euro(parseFloat(o.price.replace(",", ".")))}</span></div></div>` : ""}
+        </div>`;
+}
+
+function renderFlyers() {
+  if (!flyerState || !flyerState.enabled) { $("flyerList").innerHTML = ""; return; }
+  const offers = flyerOffers();
+  $("flyerList").innerHTML = offers.length ? `
+    <article class="store featured flyers">
+      <h2>${t("flyersTitle")} <span class="h-count">${offers.length}</span></h2>
+      <p class="flyer-source">${t("flyersSource", { source: `<a href="${esc(flyerState.library_url)}" target="_blank" rel="noopener">${esc(flyerState.source)}</a>` })}</p>
+      ${offers.map(flyerRow).join("")}
+    </article>`
+    : flyerState.checked_at ? `<p class="flyers-none">${t("flyersNone")} <a href="${esc(flyerState.library_url)}" target="_blank" rel="noopener">${t("seeFlyers")}</a></p>` : "";
+}
+
+async function loadFlyers() {
+  flyerState = await api("GET", "/api/flyers");
+  render();
 }
 
 function storeHead(store) {
@@ -700,6 +750,7 @@ $("storeSearch").addEventListener("input", () => {
 
 setLang(lang);
 load().catch(showError);
+loadFlyers().catch(() => {});  // the flyers are a bonus; the page works without them
 </script>
 </body>
 </html>

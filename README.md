@@ -6,6 +6,8 @@ For each deal it shows the supermarket chain, store, location, original price, d
 It checks the S-group stores (Prisma, S-market, Sale, Alepa, ABC) via the s-kaupat.fi API.
 Other chains aren't supported.
 
+The online shop only sells packaged irtokarkki (bags and boxes), not the weighed pick-and-mix from the bins. To catch pick-and-mix sales too, the app also reads the weekly flyers that the regional S-group cooperative publishes on view.sok-julkaisut.fi and shows any offer that mentions pick-and-mix ("irtomakeiset", "irtokarkit", "irtonamujo"). By default it reads Turun Osuuskauppa's flyers (Turku area); change `library` in the `[flyers]` section of `config.toml` for another region. Sales that a single store only announces on social media still don't show up.
+
 ## Setup
 
 Requires Python 3.11 or newer.
@@ -27,7 +29,7 @@ Edit `config.toml` to choose your city (or specific stores), search words and no
 
 Then open http://localhost:5000. The page has two tabs:
 
-- **Discounts**: stores that have irtokarkki on sale, each with its deals (original price, sale price, % off, end date). Below them are the stores with no discount right now, with their current prices, and last the stores that don't sell irtokarkki online. Your favourite stores are listed first, and "★ Favourites only" hides the others.
+- **Discounts**: first any pick-and-mix offers in the flyers, with a link to the flyer. Then stores that have irtokarkki on sale, each with its deals (original price, sale price, % off, end date). Below them are the stores with no discount right now, with their current prices, and last the stores that don't sell irtokarkki online. Your favourite stores are listed first, and "★ Favourites only" hides the others.
 - **Stores**: tap ☆ to favourite the stores you usually go to. Search finds any S-group store in Finland, even outside your city. Favourite stores are always checked.
 
 Use the FI / SV / EN switch in the top corner to change the language. The first time, the app picks your browser's language. City names work in Swedish too (e.g. "Åbo").
@@ -79,7 +81,7 @@ By default the server only listens on this computer; set `IRTOKARKKI_HOST=0.0.0.
 .venv\Scripts\python -m irtokarkki --no-notify  # only print the table
 ```
 
-You get a notification only for deals you haven't been notified about yet (tracked in `seen_deals.json`). Once you have favourite stores, you're only notified about deals in those (set `only_favourites = false` in `config.toml` to change this).
+You get a notification only for deals you haven't been notified about yet (tracked in `seen_deals.json`). Once you have favourite stores, you're only notified about deals in those (set `only_favourites = false` in `config.toml` to change this). Pick-and-mix offers from the flyers are always notified, since they apply to all of the cooperative's stores.
 
 The command line favourites are listed in `favourites.json` in the project folder. Favourite stores are always checked, even outside your city. Store IDs are in the store URLs on s-kaupat.fi:
 
@@ -105,8 +107,9 @@ schtasks /Create /SC DAILY /ST 09:00 /TN "Irtokarkki" /TR "cmd /c cd /d `"$PWD`"
 
 ## Limitations
 
-- Stores sell real pick-and-mix (the weighed bins) only in the shop, not online. Store-wide campaigns like "irtomakeiset -30%" therefore don't show up. The app finds discounted packaged irtokarkki products listed in the online catalogs.
-- The s-kaupat.fi API is unofficial and may change without notice. This is meant for personal use, so please don't run checks more often than you need to.
+- Stores sell real pick-and-mix (the weighed bins) only in the shop, not online. The app finds pick-and-mix sales only when they're in the cooperative's flyers; a store's own sale announced on social media doesn't show up. Flyer offers are read from the flyer's text, so an offer is shown as it's printed, e.g. "Voim. la 21.11. Irtonamujo 3 kg/talous".
+- The flyer library removes a flyer once it expires, so past sales can't be looked up.
+- The s-kaupat.fi API and the flyer library are unofficial sources and may change without notice. This is meant for personal use, so please don't run checks more often than you need to.
 
 ## License
 

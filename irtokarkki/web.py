@@ -15,6 +15,7 @@ from datetime import datetime
 
 from flask import Flask, jsonify, redirect, request, send_from_directory
 
+from . import flyers
 from .core import ROOT, SOURCES, city_stores, fetch_prices, load_config, search_stores
 from .models import Deal, Store
 
@@ -38,6 +39,8 @@ REFRESH_AGE = web_cfg.get("min_refresh_minutes", 15) * 60  # "Check for deals" r
 RETRY_AFTER = 10 * 60  # don't retry a store that failed for this long
 CITY_MAX_AGE = 24 * 3600  # which stores are in a city rarely changes
 MAX_FAVOURITES = 30
+flyer_cfg = config.get("flyers", {})
+FLYER_MAX_AGE = flyer_cfg.get("cache_hours", 3) * 3600
 STORE_FIELDS = ("chain", "store_id", "name", "location", "map_url", "source", "location_sv")
 ACCESS_KEY = load_access_key()
 
@@ -203,6 +206,52 @@ def _deal_json(deal: Deal) -> dict:
     return {**d, "store_key": deal.store.key, "percent_off": deal.percent_off, "discounted": deal.is_discounted}
 
 
+class FlyerCache:
+    """Pick-and-mix offers in the configured flyer library, shared by all visitors.
+
+    The list of flyers is fetched again after FLYER_MAX_AGE; each flyer's text only once,
+    since a published flyer doesn't change.
+    """
+
+    def __init__(self, library: str, keywords: list[str], clock=time.time):
+        self.library = library
+        self.keywords = keywords
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._pages: dict = {}  # doc_id -> pages
+        self._name = ""
+        self._offers: list[flyers.FlyerOffer] = []
+        self._checked_at: float | None = None
+        self._failed_at = -RETRY_AFTER
+        self._error = ""
+
+    def get(self) -> dict:
+        with self._lock:  # one visitor fetches; the others wait and get the same result
+            now = self._clock()
+            stale = self._checked_at is None or now - self._checked_at >= FLYER_MAX_AGE
+            if stale and now - self._failed_at >= RETRY_AFTER:
+                try:
+                    self._name = self._name or flyers.library_name(self.library)
+                    self._offers = flyers.check(self.library, self.keywords, self._pages)
+                    self._checked_at, self._error = now, ""
+                except Exception as e:  # keep showing the last offers
+                    self._failed_at, self._error = now, f"flyers: {e}"
+            return {
+                "source": self._name or self.library,
+                "library_url": f"{flyers.BASE_URL}/library/{self.library}",
+                "checked_at": (datetime.fromtimestamp(self._checked_at).astimezone().isoformat(timespec="minutes")
+                               if self._checked_at else None),
+                "error": self._error,
+                "offers": [{"flyer_title": o.flyer.title, "flyer_url": o.flyer.url, "published": o.flyer.published,
+                            "description": o.description, "price": o.price} for o in self._offers],
+            }
+
+
+flyer_cache = (FlyerCache(flyer_cfg.get("library", "tok-ilmoitukset"),
+                          flyer_cfg.get("keywords", ["irtomakeis", "irtokark", "irtonamu"]))
+               if flyer_cfg.get("enabled", True) else None)
+
+
 @app.get("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
@@ -237,6 +286,13 @@ def get_state():
         "stores": [_store_json(s, favourite_keys, s.key in snap["checked"]) for s in stores],
         "deals": [_deal_json(d) for d in sorted(snap["deals"], key=lambda d: (d.discounted_price, d.store.name))],
     })
+
+
+@app.get("/api/flyers")
+def get_flyers():
+    if flyer_cache is None:
+        return jsonify({"enabled": False, "offers": []})
+    return jsonify({"enabled": True, **flyer_cache.get()})
 
 
 @app.get("/api/stores/search")
