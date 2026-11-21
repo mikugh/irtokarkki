@@ -83,7 +83,7 @@
   .lang button:hover { color: var(--ink); }
   .lang button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(42, 22, 48, .14); }
 
-  /* Hero: the answer to "is irtokarkki on sale near me?" */
+  /* Hero: the answer to "is anything I buy on sale?" */
   .hero { margin: 64px 0 0; }
   h1 {
     margin: 0; max-width: 12ch;
@@ -104,7 +104,6 @@
     font: 500 16px var(--text); padding: 11px 4px;
   }
   .field input::placeholder { color: var(--muted); font-weight: 400; }
-  #cityForm { margin-top: 32px; }
   .primary {
     flex: none; border: none; border-radius: 999px; padding: 12px 22px;
     background: var(--raspberry); color: var(--on-raspberry); font-weight: 700; font-size: 15px;
@@ -249,15 +248,49 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Hero actions */
+  .hero-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 16px; }
+  .hero-row .status { margin: 0; flex: 1 1 220px; }
+
+  /* Sales: one card, a lemon price tag per sale. */
+  .sales { padding-top: 6px; }
+  .sales .deal:first-child { border-top: none; padding-top: 12px; }
+  .deal-item { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+  .deal-meta a { color: inherit; text-underline-offset: 3px; }
+
+  /* The list */
+  .add { position: relative; }
+  .suggest { margin-top: 8px; }
+  .suggest .row { width: 100%; border: none; border-top: 1px solid var(--rule); background: none; text-align: left; }
+  .suggest .row:first-child { border-top: none; }
+  .suggest .row:hover, .suggest .row:focus-visible { background: var(--surface-2); }
+  .suggest .pprice { margin-left: auto; }
+  .plus {
+    flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--raspberry-soft); color: var(--raspberry); font: 600 18px/1 var(--display);
+  }
+  .item-kind {
+    flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--surface-2); color: var(--muted); font: 600 13px/1 var(--display);
+  }
+  .item-sub { color: var(--muted); font-size: 14px; }
+  .item-actions { flex: none; display: flex; align-items: center; gap: 6px; }
+  .item-actions .chip { padding: 5px 11px; font-size: 13px; }
+  .remove {
+    flex: none; display: grid; place-items: center; width: 36px; height: 36px;
+    border: none; background: none; border-radius: 50%; color: var(--muted); font-size: 18px;
+  }
+  .remove:hover { background: var(--surface-2); color: var(--ink); }
+
   @media (max-width: 560px) {
     .wrap { padding: 14px 16px 96px; }
     .hero { margin-top: 44px; }
-    .tabs { margin-top: 44px; }
+    .tabs { margin-top: 44px; gap: 20px; }
     .store.featured { padding: 16px 16px 6px; border-radius: 20px; }
-    .store-body { margin-left: 0; }
     .deal { gap: 12px; }
     .primary { padding: 12px 16px; }
-    #cityForm { padding-left: 14px; }
+    .row { flex-wrap: wrap; }
+    .item-actions { margin-left: 48px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .logo g, .logo.busy g, .spinner { animation: none; }
@@ -285,27 +318,32 @@
 
   <section class="hero">
     <h1 id="headline" aria-live="polite"></h1>
-    <p class="status" id="status"></p>
-    <form class="field" id="cityForm">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
-      <input type="text" id="city" data-i18n-placeholder="cityPlaceholder" data-i18n-label="cityLabel" autocomplete="off">
-      <button type="submit" class="primary" id="refreshBtn" data-i18n="check"></button>
-    </form>
+    <div class="hero-row">
+      <p class="status" id="status"></p>
+      <button class="primary" id="refreshBtn" data-i18n="check"></button>
+    </div>
   </section>
 
   <div id="errors"></div>
 
   <nav class="tabs">
-    <button class="tab active" data-tab="deals"><span data-i18n="tabDeals"></span> <span class="count" id="dealsCount">0</span></button>
+    <button class="tab active" data-tab="sales"><span data-i18n="tabSales"></span> <span class="count" id="salesCount">0</span></button>
+    <button class="tab" data-tab="list"><span data-i18n="tabList"></span> <span class="count" id="listCount">0</span></button>
     <button class="tab" data-tab="stores"><span data-i18n="tabStores"></span> <span class="count" id="favCount">0</span></button>
   </nav>
 
-  <section id="dealsView">
-    <div id="flyerList"></div>
-    <div class="filters">
-      <button class="chip" id="favOnly"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.5 6 .9-4.35 4.25 1.03 6L12 17l-5.38 2.85 1.03-6L3.3 9.6l6-.9z"/></svg><span data-i18n="favOnly"></span></button>
+  <section id="salesView"></section>
+
+  <section id="listView" hidden>
+    <div class="add">
+      <label class="field">
+        <span class="plus" aria-hidden="true">+</span>
+        <input type="text" id="addInput" data-i18n-placeholder="addPlaceholder" data-i18n-label="addPlaceholder" autocomplete="off" maxlength="60">
+      </label>
+      <div id="suggest"></div>
     </div>
-    <div id="dealsList"></div>
+    <p class="quiet" data-i18n="addHint"></p>
+    <div id="listItems"></div>
   </section>
 
   <section id="storesView" hidden>
@@ -320,67 +358,82 @@
 <script>
 const STRINGS = {
   fi: {
-    cityPlaceholder: "Kaupunki, esim. Turku", cityLabel: "Kaupunki", check: "Hae tarjoukset",
-    tabDeals: "Tarjoukset", tabStores: "Kaupat", favOnly: "Vain suosikit",
-    storeSearch: "Etsi kauppaa nimellä tai kaupungilla, esim. ”Prisma Kaleva”",
-    storeSearchLabel: "Etsi kauppoja",
-    heroChecking: "Etsitään tarjouksia…", heroNone: "Ei tarjouksia juuri nyt", heroNoneFav: "Ei tarjouksia suosikeissasi",
-    heroOne: "1 irtokarkki­tarjous", heroMany: "{n} irtokarkki­tarjousta",
-    heroNoCity: "Ei kauppoja paikassa ”{city}”", noCityHint: "Tarkista kaupungin nimi.",
-    checking: "Tarkistetaan kauppoja…", updated: "Tarkistettu {n} kauppaa {time}", updatedOne: "Tarkistettu 1 kauppa {time}",
-    error: "Joitakin kauppoja ei voitu tarkistaa: {e}",
+    check: "Tarkista nyt", tabSales: "Tarjoukset", tabList: "Lista", tabStores: "Kaupat",
+    heroChecking: "Etsitään tarjouksia…", heroNone: "Listaltasi ei ole mitään tarjouksessa",
+    heroOne: "1 tarjous listaltasi", heroMany: "{n} tarjousta listaltasi", heroNoStores: "Valitse ensin kauppasi",
+    heroEmptyList: "Lisää listallesi ostoksia",
+    checking: "Tarkistetaan…", updated: "Tarkistettu {time}",
+    error: "Kaikkea ei voitu tarkistaa: {e}",
+    until: "Voimassa {date} asti", openFlyer: "Avaa lehti",
+    noStoresYet: "Et ole vielä valinnut kauppoja. Merkitse kaupat, joissa käyt, tähdellä Kaupat-välilehdellä.",
+    emptyList: "Listasi on tyhjä. Lisää tuotteita tai sanoja Lista-välilehdellä.",
+    noneOnSale: "Mikään listasi tuote ei ole nyt tarjouksessa {stores}. Puhelimeesi tulee viesti, kun jokin menee tarjoukseen.",
+    inStores: "suosikkikaupoissasi",
+    addPlaceholder: "Lisää tuote tai sana…",
+    addWord: "Lisää sana ”{w}”", addWordSub: "mikä tahansa tuote, jonka nimessä se on",
+    addHint: "Vinkki: kirjoita sanan alku: ”irtokark” löytää myös ”irtokarkit”. Tarkan tuotteen saat valitsemalla sen listasta.",
+    tooShort: "Kirjoita vähintään 3 kirjainta.",
+    pickStoreToSearch: "Tuotteita haetaan suosikkikauppasi valikoimasta. Valitse kauppa Kaupat-välilehdellä.",
+    noProducts: "Tuotteita ei löytynyt.", searching: "Haetaan…",
+    any: "mikä tahansa merkki", product: "tarkka tuote", flyers: "Myös lehdistä",
+    flyersHint: "Etsi myös tarjouslehdistä: tuotteille, joita ei myydä verkossa, kuten irtomakeisille.",
+    remove: "Poista", listTitle: "Listasi", listEmpty: "Lista on tyhjä.",
+    storeSearch: "Etsi kauppaa nimellä tai kaupungilla, esim. ”Prisma Kaleva”", storeSearchLabel: "Etsi kauppoja",
     addFav: "Lisää suosikkeihin", removeFav: "Poista suosikeista", map: "Kartta",
-    until: "Voimassa {date} asti",
-    noFavsYet: "Et ole vielä valinnut suosikkikauppoja. Merkitse kauppoja tähdellä Kaupat-välilehdellä.",
-    storesNoDiscount: "Kaupat ilman alennusta", storesNoProducts: "Ei irtokarkkia verkkovalikoimassa",
-    checkingShort: "tarkistetaan…", dealsOne: "1 tarjous", dealsMany: "{n} tarjousta", noDealsShort: "ei tarjouksia",
     noStoresFound: "Kauppoja ei löytynyt.", favourites: "Suosikit",
-    favHint: "Lisää kauppa suosikkeihin napauttamalla ☆. Suosikkikaupat tarkistetaan aina, myös muissa kaupungeissa.",
-    storesIn: "Kaupat: {city}", loading: "Ladataan…", noOtherStores: "Ei muita kauppoja.", searching: "Haetaan…",
-    flyersTitle: "Irtomakeiset tarjouslehdissä", flyersSource: "Lähde: {source}", openFlyer: "Avaa lehti",
-    flyersNone: "Ajankohtaisissa tarjouslehdissä ei ole irtomakeistarjouksia.", seeFlyers: "Katso lehdet",
+    favHint: "Etsi kauppa yltä ja napauta ☆. Listasi tarkistetaan suosikkikaupoistasi.",
   },
   sv: {
-    cityPlaceholder: "Stad, t.ex. Åbo", cityLabel: "Stad", check: "Sök erbjudanden",
-    tabDeals: "Erbjudanden", tabStores: "Butiker", favOnly: "Endast favoriter",
-    storeSearch: "Sök butik med namn eller stad, t.ex. ”Prisma Kaleva”",
-    storeSearchLabel: "Sök butiker",
-    heroChecking: "Söker erbjudanden…", heroNone: "Inga erbjudanden just nu", heroNoneFav: "Inga erbjudanden i dina favoriter",
-    heroOne: "1 erbjudande på lösgodis", heroMany: "{n} erbjudanden på lösgodis",
-    heroNoCity: "Inga butiker i ”{city}”", noCityHint: "Kontrollera stadens namn.",
-    checking: "Kontrollerar butiker…", updated: "Kontrollerade {n} butiker {time}", updatedOne: "Kontrollerade 1 butik {time}",
-    error: "Vissa butiker kunde inte kontrolleras: {e}",
+    check: "Kontrollera nu", tabSales: "Erbjudanden", tabList: "Lista", tabStores: "Butiker",
+    heroChecking: "Söker erbjudanden…", heroNone: "Inget på din lista är på rea",
+    heroOne: "1 erbjudande från din lista", heroMany: "{n} erbjudanden från din lista", heroNoStores: "Välj dina butiker först",
+    heroEmptyList: "Lägg till varor på din lista",
+    checking: "Kontrollerar…", updated: "Kontrollerat {time}",
+    error: "Allt kunde inte kontrolleras: {e}",
+    until: "Gäller till {date}", openFlyer: "Öppna bladet",
+    noStoresYet: "Du har inte valt några butiker ännu. Stjärnmärk butikerna du handlar i under fliken Butiker.",
+    emptyList: "Din lista är tom. Lägg till produkter eller ord under fliken Lista.",
+    noneOnSale: "Inget på din lista är på rea {stores} just nu. Du får ett meddelande på telefonen när något blir det.",
+    inStores: "i dina favoritbutiker",
+    addPlaceholder: "Lägg till en produkt eller ett ord…",
+    addWord: "Lägg till ordet ”{w}”", addWordSub: "vilken produkt som helst med det i namnet",
+    addHint: "Tips: skriv början av ordet: ”irtokark” hittar också ”irtokarkit”. Välj en produkt i listan för att lägga till just den.",
+    tooShort: "Skriv minst 3 bokstäver.",
+    pickStoreToSearch: "Produkter söks i din favoritbutiks sortiment. Välj en butik under fliken Butiker.",
+    noProducts: "Inga produkter hittades.", searching: "Söker…",
+    any: "vilket märke som helst", product: "exakt produkt", flyers: "Även i bladen",
+    flyersHint: "Sök också i reklambladen: för sådant som inte säljs på nätet, som lösgodis.",
+    remove: "Ta bort", listTitle: "Din lista", listEmpty: "Listan är tom.",
+    storeSearch: "Sök butik med namn eller stad, t.ex. ”Prisma Kaleva”", storeSearchLabel: "Sök butiker",
     addFav: "Lägg till bland favoriter", removeFav: "Ta bort från favoriter", map: "Karta",
-    until: "Gäller till {date}",
-    noFavsYet: "Du har inte valt några favoritbutiker ännu. Stjärnmärk butiker under fliken Butiker.",
-    storesNoDiscount: "Butiker utan rabatt", storesNoProducts: "Inget lösgodis i nätsortimentet",
-    checkingShort: "kontrolleras…", dealsOne: "1 erbjudande", dealsMany: "{n} erbjudanden", noDealsShort: "inga erbjudanden",
     noStoresFound: "Inga butiker hittades.", favourites: "Favoriter",
-    favHint: "Tryck på ☆ för att lägga till en butik bland favoriterna. Favoritbutiker kontrolleras alltid, även i andra städer.",
-    storesIn: "Butiker i {city}", loading: "Laddar…", noOtherStores: "Inga andra butiker.", searching: "Söker…",
-    flyersTitle: "Lösgodis i reklambladen", flyersSource: "Källa: {source}", openFlyer: "Öppna bladet",
-    flyersNone: "De aktuella reklambladen har inga erbjudanden på lösgodis.", seeFlyers: "Se bladen",
+    favHint: "Sök en butik ovan och tryck på ☆. Din lista kontrolleras i dina favoritbutiker.",
   },
   en: {
-    cityPlaceholder: "City, e.g. Turku", cityLabel: "City", check: "Check for deals",
-    tabDeals: "Discounts", tabStores: "Stores", favOnly: "Favourites only",
-    storeSearch: "Find any store by name or city, e.g. “Prisma Kaleva”",
-    storeSearchLabel: "Search stores",
-    heroChecking: "Looking for deals…", heroNone: "No deals right now", heroNoneFav: "No deals in your favourites",
-    heroOne: "1 irtokarkki deal", heroMany: "{n} irtokarkki deals",
-    heroNoCity: "No stores in “{city}”", noCityHint: "Check the spelling of the city.",
-    checking: "Checking stores…", updated: "Checked {n} stores on {time}", updatedOne: "Checked 1 store on {time}",
-    error: "Couldn't check some stores: {e}",
+    check: "Check now", tabSales: "On sale", tabList: "My list", tabStores: "Stores",
+    heroChecking: "Looking for sales…", heroNone: "Nothing on your list is on sale",
+    heroOne: "1 thing on your list is on sale", heroMany: "{n} things on your list are on sale", heroNoStores: "Pick your stores first",
+    heroEmptyList: "Add what you buy to your list",
+    checking: "Checking…", updated: "Checked {time}",
+    error: "Couldn't check everything: {e}",
+    until: "Until {date}", openFlyer: "Open flyer",
+    noStoresYet: "You haven't picked any stores yet. Star the stores you shop at in the Stores tab.",
+    emptyList: "Your list is empty. Add products or words in the My list tab.",
+    noneOnSale: "Nothing on your list is on sale {stores} right now. Your phone gets a message when something is.",
+    inStores: "in your favourite stores",
+    addPlaceholder: "Add a product or a word…",
+    addWord: "Add the word “{w}”", addWordSub: "any product with it in its name",
+    addHint: "Tip: type the start of a word: “irtokark” also finds “irtokarkit”. Pick a product from the results to add exactly that one.",
+    tooShort: "Type at least 3 letters.",
+    pickStoreToSearch: "Products are searched in your favourite store's range. Pick a store in the Stores tab.",
+    noProducts: "No products found.", searching: "Searching…",
+    any: "any brand", product: "exact product", flyers: "Also in flyers",
+    flyersHint: "Also look in the flyers: for things not sold online, like pick-and-mix.",
+    remove: "Remove", listTitle: "Your list", listEmpty: "The list is empty.",
+    storeSearch: "Find any store by name or city, e.g. “Prisma Kaleva”", storeSearchLabel: "Search stores",
     addFav: "Add to favourites", removeFav: "Remove from favourites", map: "Map",
-    until: "Until {date}",
-    noFavsYet: "You haven't picked any favourite stores yet. Star stores in the Stores tab.",
-    storesNoDiscount: "Stores without a discount", storesNoProducts: "No irtokarkki in the online selection",
-    checkingShort: "checking…", dealsOne: "1 deal", dealsMany: "{n} deals", noDealsShort: "no deals",
     noStoresFound: "No stores found.", favourites: "Favourites",
-    favHint: "Tap ☆ on a store to add it to your favourites. Favourite stores are always checked for deals, even in other cities.",
-    storesIn: "Stores in {city}", loading: "Loading…", noOtherStores: "No other stores.", searching: "Searching…",
-    flyersTitle: "Pick-and-mix in the flyers", flyersSource: "Source: {source}", openFlyer: "Open flyer",
-    flyersNone: "No pick-and-mix offers in the current flyers.", seeFlyers: "See the flyers",
+    favHint: "Find a store above and tap ☆. Your list is checked in your favourite stores.",
   },
 };
 const LOCALES = { fi: "fi-FI", sv: "sv-FI", en: "en-GB" };
@@ -408,7 +461,6 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":
 const euro = (n) => new Intl.NumberFormat(LOCALES[lang], { style: "currency", currency: "EUR" }).format(n);
 const fmtDate = (iso) => iso ? new Intl.DateTimeFormat(LOCALES[lang]).format(new Date(iso + "T12:00")) : "";
 const fmtDateTime = (iso) => new Intl.DateTimeFormat(LOCALES[lang], { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
-const productName = (d) => (d.product_names && d.product_names[lang]) || d.product;
 
 function setLang(code) {
   lang = code;
@@ -419,242 +471,194 @@ function setLang(code) {
   document.querySelectorAll("[data-i18n-label]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nLabel)); });
   document.querySelectorAll(".lang button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === code)));
   render();
+  renderSuggest();
 }
-let state = { stores: [], deals: [], loading: true };
-let flyerState = null;  // pick-and-mix offers in the flyers, from /api/flyers
-let favOnly = false;
-try { favOnly = localStorage.getItem("favOnly") === "1"; } catch {}
-let searchResults = null;
-let pollTimer = null;
 
-// Each visitor's city and favourite stores are kept in their own browser and sent with every request.
+// Everything lives on the server, so it's the same on the phone and the computer.
+let items = [];         // the shopping list
+let stores = [];        // favourite stores
+let sales = null;       // the latest check, from /api/sales
+let checking = false;
+let ready = false;      // list and stores loaded
+let storeResults = null;
+let productResults = null;  // {q, results} or null
 const STORE_FIELDS = ["chain", "store_id", "name", "location", "map_url", "source", "location_sv"];
-function readStored(key, fallback) {
-  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; }
-}
-function writeStored(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
-// Only S-group stores are supported; drop favourites saved when other chains were.
-let favourites = readStored("favourites", []).filter((f) => f.source === "s_group");
-let city = readStored("city", "");
-const isFavourite = (key) => favourites.some((f) => `${f.source}:${f.store_id}` === key);
 
 async function api(method, url, body) {
   const res = await fetch(url, {
     method, headers: body ? { "Content-Type": "application/json" } : {},
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try { msg = (await res.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
   return res.json();
-}
-
-async function load(refresh = false) {
-  clearTimeout(pollTimer);
-  const requestedCity = city;
-  const s = await api("POST", "/api/state", { city, favourites, refresh });
-  if (requestedCity === city) setState(s);  // ignore answers for a city the visitor has since changed
-}
-
-function setState(s) {
-  state = s;
-  if (document.activeElement !== $("city")) $("city").value = s.city;
-  render();
-  clearTimeout(pollTimer);
-  if (s.loading) pollTimer = setTimeout(() => load().catch(showError), 2000);
 }
 
 function showError(err) {
   $("errors").innerHTML = `<div class="error">${esc(err.message)}</div>`;
 }
 
-function storeByKey() {
-  return Object.fromEntries(state.stores.map((s) => [s.key, s]));
+// Quick edits start overlapping checks; only the latest one's answer counts.
+let checkId = 0;
+async function checkSales(refresh = false) {
+  const id = ++checkId;
+  checking = true;
+  render();
+  try {
+    const result = await api("POST", "/api/sales", { refresh });
+    if (id === checkId) sales = result;
+  } finally {
+    if (id === checkId) { checking = false; render(); }
+  }
 }
 
-const isShown = (store) => store && store.checked && (!favOnly || store.favourite);
-
-function mark(store) {
-  return `<span class="mark ${esc(store.source)}" title="${esc(store.chain)}" aria-hidden="true">S</span>`;
+async function saveList(next) {
+  items = next;
+  render();
+  items = (await api("PUT", "/api/list", { items })).items;
+  render();
+  await checkSales();
 }
 
-function starButton(store) {
-  const label = t(store.favourite ? "removeFav" : "addFav");
-  return `<button class="star ${store.favourite ? "on" : ""}" data-key="${esc(store.key)}"
-    title="${label}" aria-label="${label}" aria-pressed="${store.favourite}">${ICONS.star}</button>`;
+async function saveStores(next) {
+  stores = next;
+  render();
+  stores = (await api("PUT", "/api/favourites", { stores: stores.map((s) => Object.fromEntries(STORE_FIELDS.map((f) => [f, s[f] ?? ""]))) })).stores;
+  render();
+  await checkSales();
 }
 
-function storeLocation(store) {
-  const text = esc((lang === "sv" && store.location_sv) || store.location || "");
-  return store.map_url ? `<a href="${esc(store.map_url)}" target="_blank" rel="noopener">${ICONS.pin}${text || t("map")}</a>` : text;
+// Favourites used to live in the browser. Move them to the server once.
+async function moveOldFavourites() {
+  let old = [];
+  try { old = (JSON.parse(localStorage.getItem("favourites")) || []).filter((f) => f.source === "s_group"); } catch {}
+  if (old.length && !stores.length) {
+    stores = (await api("PUT", "/api/favourites", { stores: old })).stores;
+  }
+  try { localStorage.removeItem("favourites"); localStorage.removeItem("city"); localStorage.removeItem("favOnly"); } catch {}
 }
 
-const cityMissing = () => state.city_found === false;
+const saleList = () => (sales && sales.sales) || [];
 
-function headline(stores) {
-  if (cityMissing()) return t("heroNoCity", { city: state.city });  // set as textContent, so no escaping needed
-  if (state.loading && !state.updated_at) return t("heroChecking");
-  const n = state.deals.filter((d) => d.discounted && isShown(stores[d.store_key])).length + flyerOffers().length;
-  if (n === 0) return t(favOnly ? "heroNoneFav" : "heroNone");
+function headline() {
+  if (!ready || (checking && !sales)) return t("heroChecking");
+  if (!items.length) return t("heroEmptyList");
+  const n = saleList().length;
+  if (!n && !stores.length) return t("heroNoStores");
+  if (!n) return t("heroNone");
   return n === 1 ? t("heroOne") : t("heroMany", { n });
 }
 
 function render() {
-  const stores = storeByKey();
-  const favs = state.stores.filter((s) => s.favourite);
-  const checked = state.stores.filter((s) => s.checked).length;
-
-  $("headline").textContent = headline(stores);
-  $("logo").classList.toggle("busy", !!state.loading);
-  $("status").textContent = state.loading ? t("checking")
-    : cityMissing() && !checked ? t("noCityHint")
-    : state.updated_at ? t(checked === 1 ? "updatedOne" : "updated", { time: fmtDateTime(state.updated_at), n: checked }) : "";
-  $("refreshBtn").disabled = !!state.loading;
-  $("errors").innerHTML = (state.errors || []).map((e) => `<div class="error">${t("error", { e: esc(e) })}</div>`).join("");
-  $("dealsCount").textContent = state.deals.filter((d) => d.discounted).length + flyerOffers().length;
-  $("favCount").innerHTML = `${favs.length}${ICONS.star}`;
-  $("favOnly").classList.toggle("on", favOnly);
-  $("favOnly").setAttribute("aria-pressed", String(favOnly));
-
-  renderFlyers();
-  renderDeals(stores, favs);
+  $("headline").textContent = headline();
+  $("logo").classList.toggle("busy", checking);
+  $("status").textContent = checking ? t("checking") : sales && sales.checked_at ? t("updated", { time: fmtDateTime(sales.checked_at) }) : "";
+  $("refreshBtn").disabled = checking || !ready;
+  $("errors").innerHTML = ((sales && sales.errors) || []).map((e) => `<div class="error">${t("error", { e: esc(e) })}</div>`).join("");
+  $("salesCount").textContent = saleList().length;
+  $("listCount").textContent = items.length;
+  $("favCount").innerHTML = `${stores.length}${ICONS.star}`;
+  renderSales();
+  renderList();
   renderStores();
 }
 
-const flyerOffers = () => (flyerState && flyerState.offers) || [];
-
-function flyerRow(o) {
+function saleRow(s) {
+  const label = s.item_type === "product" ? esc(s.item) : `${esc(s.item)}: ${esc(s.product)}`;
+  const isFlyer = s.regular_price === null;
+  const off = s.regular_price && s.price !== null ? Math.round(100 * (1 - s.price / s.regular_price)) : 0;
+  const meta = isFlyer
+    ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.place)} · ${t("openFlyer")}</a>`
+    : `<span>${esc(s.place)}</span>${s.until ? `<span>${t("until", { date: fmtDate(s.until) })}</span>` : ""}`;
   return `
         <div class="deal">
           <div>
-            <div class="deal-name">${esc(o.description)}</div>
-            <div class="deal-meta">
-              <a href="${esc(o.flyer_url)}" target="_blank" rel="noopener">${esc(o.flyer_title)} · ${t("openFlyer")}</a>
-            </div>
+            <div class="deal-name">${label}</div>
+            <div class="deal-meta">${meta}</div>
           </div>
-          ${o.price ? `<div class="price-tag"><div class="tag"><span class="now">${euro(parseFloat(o.price.replace(",", ".")))}</span></div></div>` : ""}
-        </div>`;
-}
-
-function renderFlyers() {
-  if (!flyerState || !flyerState.enabled) { $("flyerList").innerHTML = ""; return; }
-  const offers = flyerOffers();
-  $("flyerList").innerHTML = offers.length ? `
-    <article class="store featured flyers">
-      <h2>${t("flyersTitle")} <span class="h-count">${offers.length}</span></h2>
-      <p class="flyer-source">${t("flyersSource", { source: `<a href="${esc(flyerState.library_url)}" target="_blank" rel="noopener">${esc(flyerState.source)}</a>` })}</p>
-      ${offers.map(flyerRow).join("")}
-    </article>`
-    : flyerState.checked_at ? `<p class="flyers-none">${t("flyersNone")} <a href="${esc(flyerState.library_url)}" target="_blank" rel="noopener">${t("seeFlyers")}</a></p>` : "";
-}
-
-async function loadFlyers() {
-  flyerState = await api("GET", "/api/flyers");
-  render();
-}
-
-function storeHead(store) {
-  return `
-      <div class="store-head">
-        ${mark(store)}
-        <div class="store-info">
-          <h3 class="store-name">${esc(store.name)}</h3>
-          <div class="store-loc">${storeLocation(store)}</div>
-        </div>
-        ${starButton(store)}
-      </div>`;
-}
-
-function discountRow(d) {
-  return `
-        <div class="deal">
-          <div>
-            <div class="deal-name">${esc(productName(d))}</div>
-            <div class="deal-meta">
-              ${d.valid_until ? `<span>${t("until", { date: fmtDate(d.valid_until) })}</span>` : ""}
-            </div>
-          </div>
+          ${s.price === null ? "" : `
           <div class="price-tag">
             <div class="tag">
-              <span class="was">${euro(d.original_price)}</span>
-              <span class="now">${euro(d.discounted_price)}</span>
+              ${s.regular_price ? `<span class="was">${euro(s.regular_price)}</span>` : ""}
+              <span class="now">${euro(s.price)}</span>
             </div>
-            <span class="off">−${d.percent_off}%</span>
-          </div>
+            ${off > 0 ? `<span class="off">−${off}%</span>` : ""}
+          </div>`}
         </div>`;
 }
 
-function priceList(prices) {
-  if (!prices.length) return "";
-  return `<ul class="price-list">${prices.map((d) => `
-          <li class="price-row"><span class="pname">${esc(productName(d))}</span><span class="leader" aria-hidden="true"></span><span class="pprice">${euro(d.discounted_price)}</span></li>`).join("")}
-        </ul>`;
+function renderSales() {
+  let html = "";
+  if (!ready) html = "";
+  else if (!items.length) html = `<p class="empty">${t("emptyList")}</p>`;
+  else if (saleList().length) html = `<article class="store featured sales">${saleList().map(saleRow).join("")}</article>`;
+  else if (sales && !checking && stores.length) html = `<p class="empty">${t("noneOnSale", { stores: t("inStores") })}</p>`;
+  if (ready && !stores.length) html += `<p class="empty">${t("noStoresYet")}</p>`;
+  $("salesView").innerHTML = html;
 }
 
-function renderDeals(stores, favs) {
-  const byStore = {};
-  for (const d of state.deals) (byStore[d.store_key] ??= []).push(d);
-  const cheapest = (prices) => Math.min(...prices.map((d) => d.discounted_price));
-
-  // 1. Stores with at least one discount: discounted products first, then the rest at their current price.
-  const withDiscount = [], withoutDiscount = [], noProducts = [];
-  for (const store of state.stores.filter(isShown)) {
-    const prices = (byStore[store.key] || []).slice().sort((a, b) => a.discounted_price - b.discounted_price);
-    const discounted = prices.filter((d) => d.discounted);
-    if (discounted.length) withDiscount.push({ store, discounted, regular: prices.filter((d) => !d.discounted) });
-    else if (prices.length) withoutDiscount.push({ store, regular: prices });
-    else noProducts.push(store);
-  }
-  // Favourites first, then the store with the biggest discount / the cheapest price.
-  withDiscount.sort((a, b) => (b.store.favourite - a.store.favourite) ||
-    (Math.max(...b.discounted.map((d) => d.percent_off)) - Math.max(...a.discounted.map((d) => d.percent_off))));
-  withoutDiscount.sort((a, b) => (b.store.favourite - a.store.favourite) || (cheapest(a.regular) - cheapest(b.regular)));
-  noProducts.sort((a, b) => (b.favourite - a.favourite) || a.name.localeCompare(b.name, lang));
-
-  let html = withDiscount.map(({ store, discounted, regular }) => `
-    <article class="store featured">
-      ${storeHead(store)}
-      <div class="store-body">
-        ${discounted.map(discountRow).join("")}
-        ${priceList(regular)}
-      </div>
-    </article>`).join("");
-
-  // The headline already says when nothing is on sale; only the "no favourites yet" case needs directions.
-  if (!withDiscount.length && favOnly && !favs.length) html = `<p class="empty">${t("noFavsYet")}</p>`;
-
-  // 2. Stores that sell irtokarkki but have no discount right now, with current prices.
-  if (withoutDiscount.length) {
-    html += `<h2>${t("storesNoDiscount")} <span class="h-count">${withoutDiscount.length}</span></h2>` +
-      withoutDiscount.map(({ store, regular }) => `
-    <article class="store plain">
-      ${storeHead(store)}
-      <div class="store-body">${priceList(regular)}</div>
-    </article>`).join("");
-  }
-
-  // 3. Stores whose online selection has no irtokarkki at all.
-  if (noProducts.length) {
-    html += `<h2>${t("storesNoProducts")} <span class="h-count">${noProducts.length}</span></h2>
-    <div class="panel">${noProducts.map((store) => `
+function renderList() {
+  const rows = items.map((it, i) => `
       <div class="row">
-        ${mark(store)}
+        <span class="item-kind" aria-hidden="true">${it.type === "word" ? "Aa" : "#"}</span>
         <div class="store-info">
-          <div class="store-name">${esc(store.name)}</div>
-          <div class="store-loc">${storeLocation(store)}</div>
+          <div class="store-name">${esc(it.type === "word" ? it.text : it.name)}</div>
+          <div class="item-sub">${it.type === "word" ? t("any") : t("product")}</div>
         </div>
-        ${starButton(store)}
-      </div>`).join("")}
-    </div>`;
-  }
-  $("dealsList").innerHTML = html;
+        <div class="item-actions">
+          ${it.type === "word" ? `<button class="chip ${it.flyers ? "on" : ""}" data-flyers="${i}" aria-pressed="${!!it.flyers}" title="${t("flyersHint")}">${t("flyers")}</button>` : ""}
+          <button class="remove" data-remove="${i}" title="${t("remove")}" aria-label="${t("remove")}">✕</button>
+        </div>
+      </div>`).join("");
+  $("listItems").innerHTML = `<h2>${t("listTitle")} <span class="h-count">${items.length}</span></h2>` +
+    (rows ? `<div class="panel">${rows}</div>` : `<p class="quiet">${t("listEmpty")}</p>`);
 }
 
-function storeRow(store, dealCounts) {
-  const n = dealCounts[store.key] || 0;
-  const checked = state.stores.some((s) => s.key === store.key && s.checked);
-  const countHtml = !checked ? (state.loading ? `<span class="deal-count none">${t("checkingShort")}</span>` : "")
-    : `<span class="deal-count ${n ? "" : "none"}">${n === 0 ? t("noDealsShort") : n === 1 ? t("dealsOne") : t("dealsMany", { n })}</span>`;
+function renderSuggest() {
+  const q = $("addInput").value.trim();
+  if (!q) { $("suggest").innerHTML = ""; return; }
+  const word = q.toLowerCase().replace(/\s+/g, " ");
+  const wordRow = word.length >= 3
+    ? `<button class="row" data-add-word="${esc(word)}"><span class="plus" aria-hidden="true">+</span>
+         <div class="store-info"><div class="store-name">${t("addWord", { w: esc(word) })}</div><div class="item-sub">${t("addWordSub")}</div></div></button>`
+    : `<div class="row"><div class="item-sub">${t("tooShort")}</div></div>`;
+  let productRows = "";
+  if (!stores.length) productRows = `<div class="row"><div class="item-sub">${t("pickStoreToSearch")}</div></div>`;
+  else if (!productResults || productResults.q !== q) productRows = q.length >= 2 ? `<div class="row"><div class="item-sub"><span class="spinner"></span>${t("searching")}</div></div>` : "";
+  else if (!productResults.results.length) productRows = `<div class="row"><div class="item-sub">${t("noProducts")}</div></div>`;
+  else productRows = productResults.results.map((p, i) => `
+      <button class="row" data-add-product="${i}"><span class="item-kind" aria-hidden="true">#</span>
+        <div class="store-info"><div class="store-name">${esc(p.name)}</div></div>
+        <span class="pprice">${euro(p.price)}</span></button>`).join("");
+  $("suggest").innerHTML = `<div class="panel suggest">${wordRow}${productRows}</div>`;
+}
+
+function addItem(item) {
+  $("addInput").value = "";
+  productResults = null;
+  renderSuggest();
+  const exists = items.some((it) => it.type === item.type && (item.type === "word" ? it.text === item.text : it.ean === item.ean));
+  if (!exists) saveList([...items, item]).catch(showError);
+}
+
+function mark(store) {
+  return `<span class="mark ${esc(store.source)}" title="${esc(store.chain)}" aria-hidden="true">S</span>`;
+}
+const isFavourite = (key) => stores.some((s) => s.key === key);
+function starButton(store) {
+  const fav = isFavourite(store.key);
+  const label = t(fav ? "removeFav" : "addFav");
+  return `<button class="star ${fav ? "on" : ""}" data-key="${esc(store.key)}"
+    title="${label}" aria-label="${label}" aria-pressed="${fav}">${ICONS.star}</button>`;
+}
+function storeLocation(store) {
+  const text = esc((lang === "sv" && store.location_sv) || store.location || "");
+  return store.map_url ? `<a href="${esc(store.map_url)}" target="_blank" rel="noopener">${ICONS.pin}${text || t("map")}</a>` : text;
+}
+function storeRow(store) {
   return `
     <div class="row">
       ${mark(store)}
@@ -662,47 +666,25 @@ function storeRow(store, dealCounts) {
         <div class="store-name">${esc(store.name)}</div>
         <div class="store-loc">${storeLocation(store)}</div>
       </div>
-      ${countHtml}
       ${starButton(store)}
     </div>`;
 }
 
 function renderStores() {
-  const dealCounts = {};
-  for (const d of state.deals) if (d.discounted) dealCounts[d.store_key] = (dealCounts[d.store_key] || 0) + 1;
-
-  if (searchResults) {
-    const rows = searchResults.map((s) => storeRow({ ...s, favourite: isFavourite(s.key) }, dealCounts)).join("");
-    $("storesList").innerHTML = rows ? `<div class="panel">${rows}</div>`
-      : `<p class="quiet">${t("noStoresFound")}</p>`;
+  if (storeResults) {
+    const rows = storeResults.map(storeRow).join("");
+    $("storesList").innerHTML = rows ? `<div class="panel">${rows}</div>` : `<p class="quiet">${t("noStoresFound")}</p>`;
     return;
   }
-
-  const favs = state.stores.filter((s) => s.favourite);
-  const others = state.stores.filter((s) => !s.favourite && s.checked)
-    .sort((a, b) => (dealCounts[b.key] || 0) - (dealCounts[a.key] || 0) || a.name.localeCompare(b.name, lang));
   $("storesList").innerHTML = `
-    <h2>${t("favourites")} <span class="h-count">${favs.length}</span></h2>
-    ${favs.length ? `<div class="panel">${favs.map((s) => storeRow(s, dealCounts)).join("")}</div>`
-      : `<p class="quiet">${t("favHint")}</p>`}
-    <h2>${t("storesIn", { city: esc(state.city) })} <span class="h-count">${others.length}</span></h2>
-    ${others.length ? `<div class="panel">${others.map((s) => storeRow(s, dealCounts)).join("")}</div>`
-      : `<p class="quiet">${state.loading ? t("loading") : t("noOtherStores")}</p>`}`;
+    <h2>${t("favourites")} <span class="h-count">${stores.length}</span></h2>
+    ${stores.length ? `<div class="panel">${stores.map(storeRow).join("")}</div>` : `<p class="quiet">${t("favHint")}</p>`}`;
 }
 
-async function toggleFavourite(key) {
-  if (isFavourite(key)) {
-    favourites = favourites.filter((f) => `${f.source}:${f.store_id}` !== key);
-  } else {
-    const store = [...(searchResults || []), ...state.stores].find((s) => s.key === key);
-    if (!store) return;
-    favourites = [...favourites, Object.fromEntries(STORE_FIELDS.map((f) => [f, store[f] ?? ""]))];
-  }
-  writeStored("favourites", favourites);
-  // Show the star change straight away; the server then checks any newly added store.
-  state = { ...state, stores: state.stores.map((s) => ({ ...s, favourite: isFavourite(s.key) })) };
-  render();
-  await load();
+function toggleFavourite(key) {
+  if (isFavourite(key)) return saveStores(stores.filter((s) => s.key !== key));
+  const store = (storeResults || []).find((s) => s.key === key);
+  return store ? saveStores([...stores, store]) : Promise.resolve();
 }
 
 document.addEventListener("click", (e) => {
@@ -714,43 +696,77 @@ document.addEventListener("click", (e) => {
 
   const tab = e.target.closest(".tab");
   if (tab) {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === tab));
-    $("dealsView").hidden = tab.dataset.tab !== "deals";
-    $("storesView").hidden = tab.dataset.tab !== "stores";
+    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x === tab));
+    for (const name of ["sales", "list", "stores"]) $(`${name}View`).hidden = tab.dataset.tab !== name;
+  }
+
+  const remove = e.target.closest("[data-remove]");
+  if (remove) saveList(items.filter((_, i) => i !== Number(remove.dataset.remove))).catch(showError);
+
+  const flyers = e.target.closest("[data-flyers]");
+  if (flyers) {
+    const i = Number(flyers.dataset.flyers);
+    saveList(items.map((it, j) => (j === i ? { ...it, flyers: !it.flyers } : it))).catch(showError);
+  }
+
+  const addWord = e.target.closest("[data-add-word]");
+  if (addWord) addItem({ type: "word", text: addWord.dataset.addWord, flyers: false });
+
+  const addProduct = e.target.closest("[data-add-product]");
+  if (addProduct && productResults) {
+    const p = productResults.results[Number(addProduct.dataset.addProduct)];
+    if (p) addItem({ type: "product", ean: p.ean, name: p.name });
   }
 });
 
-$("favOnly").addEventListener("click", () => {
-  favOnly = !favOnly;
-  try { localStorage.setItem("favOnly", favOnly ? "1" : "0"); } catch {}
-  render();
+$("refreshBtn").addEventListener("click", () => checkSales(true).catch(showError));
+
+$("addInput").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const word = $("addInput").value.trim().toLowerCase().replace(/\s+/g, " ");
+  if (word.length >= 3) addItem({ type: "word", text: word, flyers: false });
 });
 
-$("cityForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  city = $("city").value.trim();
-  writeStored("city", city);
-  $("city").blur();
-  load(true).catch(showError);
+let productTimer;
+$("addInput").addEventListener("input", () => {
+  clearTimeout(productTimer);
+  renderSuggest();
+  const q = $("addInput").value.trim();
+  if (q.length < 2 || !stores.length) return;
+  productTimer = setTimeout(async () => {
+    try {
+      const results = await api("GET", `/api/products/search?q=${encodeURIComponent(q)}`);
+      if ($("addInput").value.trim() === q) { productResults = { q, results }; renderSuggest(); }
+    } catch (err) { showError(err); }
+  }, 350);
 });
 
 let searchTimer;
 $("storeSearch").addEventListener("input", () => {
   clearTimeout(searchTimer);
   const q = $("storeSearch").value.trim();
-  if (q.length < 2) { searchResults = null; renderStores(); return; }
+  if (q.length < 2) { storeResults = null; renderStores(); return; }
   searchTimer = setTimeout(async () => {
     $("storesList").innerHTML = `<p class="quiet"><span class="spinner"></span>${t("searching")}</p>`;
     try {
       const results = await api("GET", `/api/stores/search?q=${encodeURIComponent(q)}`);
-      if ($("storeSearch").value.trim() === q) { searchResults = results; renderStores(); }
+      if ($("storeSearch").value.trim() === q) { storeResults = results; renderStores(); }
     } catch (err) { showError(err); }
   }, 350);
 });
 
+async function start() {
+  const [list, favs] = await Promise.all([api("GET", "/api/list"), api("GET", "/api/favourites")]);
+  items = list.items;
+  stores = favs.stores;
+  await moveOldFavourites();
+  ready = true;
+  render();
+  await checkSales();
+}
+
 setLang(lang);
-load().catch(showError);
-loadFlyers().catch(() => {});  // the flyers are a bonus; the page works without them
+start().catch(showError);
 </script>
 </body>
 </html>
