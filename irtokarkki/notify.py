@@ -3,6 +3,9 @@ import requests
 from . import i18n
 from .flyers import FlyerOffer
 from .models import Deal
+from .shopping import Sale
+
+MAX_LINES = 15  # a phone notification shows only the start anyway
 
 
 def flyer_line(offer: FlyerOffer, lang: str) -> str:
@@ -41,3 +44,22 @@ def ntfy(deals: list[Deal], topic: str, server: str = "https://ntfy.sh", lang: s
     title, body = _summary(deals, lang, flyer_offers)
     requests.post(f"{server.rstrip('/')}/{topic}", data=body.encode("utf-8"),
                   headers={"Title": title.encode("utf-8"), "Tags": "candy"}, timeout=30)
+
+
+def sales_message(sales: list[Sale]) -> tuple[str, str]:
+    """The daily phone message about new sales on the shopping list, in Finnish."""
+    title = "1 uusi tarjous" if len(sales) == 1 else f"{len(sales)} uutta tarjousta"
+    lines = []
+    for sale in sales[:MAX_LINES]:
+        label = sale.item if sale.item_type == "product" else f"{sale.item}: {sale.product}"
+        price = f" {i18n.price(sale.price, 'fi')}" if sale.price is not None else ""
+        lines.append(f"{label}{price} ({sale.place})")
+    if len(sales) > MAX_LINES:
+        lines.append(f"…ja {len(sales) - MAX_LINES} muuta")
+    return title, "\n".join(lines)
+
+
+def ntfy_send(title: str, body: str, topic: str, server: str = "https://ntfy.sh") -> None:
+    resp = requests.post(f"{server.rstrip('/')}/{topic}", data=body.encode("utf-8"),
+                         headers={"Title": title.encode("utf-8"), "Tags": "shopping_cart"}, timeout=30)
+    resp.raise_for_status()

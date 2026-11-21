@@ -9,12 +9,15 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from . import flyers, sgroup
+from .core import SOURCES
 from .models import Deal, Store
 
 MAX_ITEMS = 60  # keeps a check well inside Vercel's 300 s
 MIN_WORD = 3  # shorter words would match nearly everything
 MAX_WORD = 40
 MAX_NAME = 120
+MAX_STORES = 30
+STORE_FIELDS = ("chain", "store_id", "name", "location", "map_url", "source", "location_sv")
 DEFAULT_LIST = [{"type": "word", "text": t, "flyers": True} for t in ("irtokark", "irtomakeis", "irtonamu", "irttari")]
 
 
@@ -53,6 +56,21 @@ def parse_items(raw) -> list[dict]:
         if len(items) == MAX_ITEMS:
             break
     return items
+
+
+def parse_stores(raw) -> list[Store]:
+    """Favourite stores as sent by the page or kept in storage, ignoring anything malformed."""
+    stores, seen = [], set()
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict) or item.get("source") not in SOURCES or not item.get("store_id"):
+            continue
+        store = Store(**{f: str(item.get(f) or "")[:200] for f in STORE_FIELDS})
+        if store.key not in seen:
+            seen.add(store.key)
+            stores.append(store)
+        if len(stores) == MAX_STORES:
+            break
+    return stores
 
 
 def _store_sale(item: str, item_type: str, deal: Deal) -> Sale:
