@@ -40,11 +40,6 @@ class FlyerOffer:
         """The offer's text without the price at its start."""
         return re.sub(r"^\d{1,3} \d{2}\b\s*", "", self.text) if self.price else self.text
 
-    @property
-    def key(self) -> str:
-        """Identifies this offer."""
-        return f"flyer|{self.flyer.doc_id}|{self.text}"
-
 
 def _get(url: str, **kwargs) -> requests.Response:
     resp = requests.get(url, headers=HEADERS, timeout=30, **kwargs)

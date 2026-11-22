@@ -33,7 +33,6 @@ class Sale:
     place: str  # store name, or flyer title (which carries the flyer's dates)
     url: str
     until: str  # ISO date the sale ends, "" when unknown (flyers)
-    key: str  # identifies this exact sale
 
 
 def parse_items(raw) -> list[dict]:
@@ -80,15 +79,13 @@ def parse_stores(raw) -> list[Store]:
 def _store_sale(item: str, item_type: str, deal: Deal) -> Sale:
     return Sale(item=item, item_type=item_type, product=deal.product, price=deal.discounted_price,
                 regular_price=deal.original_price, place=deal.store.name,
-                url=f"https://www.s-kaupat.fi/tuote/{deal.product_id}", until=deal.valid_until,
-                key="|".join([item, deal.product_id, deal.store.store_id, f"{deal.discounted_price:.2f}", deal.valid_until]))
+                url=f"https://www.s-kaupat.fi/tuote/{deal.product_id}", until=deal.valid_until)
 
 
 def _flyer_sale(word: str, offer: flyers.FlyerOffer) -> Sale:
     return Sale(item=word, item_type="word", product=offer.description,
                 price=float(offer.price.replace(",", ".")) if offer.price else None, regular_price=None,
-                place=offer.flyer.title, url=offer.flyer.url, until="",
-                key="|".join([word, "flyer", offer.flyer.doc_id, offer.text]))
+                place=offer.flyer.title, url=offer.flyer.url, until="")
 
 
 def check_list(items: list[dict], stores: list[Store], library: str,

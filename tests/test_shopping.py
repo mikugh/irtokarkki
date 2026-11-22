@@ -105,16 +105,6 @@ def test_no_stores_still_checks_flyers(fakes):
     assert errors == [] and [s.item for s in sales] == ["irtomakeis"]
 
 
-def test_sale_keys_change_with_price_and_end_date(fakes):
-    item = [{"type": "product", "ean": JUHLA, "name": "Juhla Mokka 500g"}]
-    first = shopping.check_list(item, [HALINEN], "tok-ilmoitukset", {})[0][0].key
-    fakes.catalog[0] = Deal(HALINEN, JUHLA, "Paulig Juhla Mokka kahvi 500g", 8.89, 5.99, valid_until="2026-11-24")
-    cheaper = shopping.check_list(item, [HALINEN], "tok-ilmoitukset", {})[0][0].key
-    fakes.catalog[0] = Deal(HALINEN, JUHLA, "Paulig Juhla Mokka kahvi 500g", 8.89, 5.99, valid_until="2026-12-01")
-    later = shopping.check_list(item, [HALINEN], "tok-ilmoitukset", {})[0][0].key
-    assert len({first, cheaper, later}) == 3
-
-
 def test_parse_stores_accepts_only_numeric_ids():
     good = {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen"}
     bad = {"source": "s_group", "store_id": '1") { id } x: store(id: "2', "name": "x"}

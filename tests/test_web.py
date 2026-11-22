@@ -8,7 +8,7 @@ from irtokarkki.storage import MemoryStorage, StorageNotConfigured
 
 HALINEN = {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen", "chain": "S-market",
            "location": "Turku"}
-SALE = Sale("kahvi", "word", "Kulta Katriina 500g", 3.95, 5.29, "S-market Halinen", "https://x", "2026-11-22", "k1")
+SALE = Sale("kahvi", "word", "Kulta Katriina 500g", 3.95, 5.29, "S-market Halinen", "https://x", "2026-11-22")
 
 
 class FakeCheck:

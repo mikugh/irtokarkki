@@ -43,11 +43,3 @@ class Deal:
         if self.original_price <= 0:
             return 0
         return round(100 * (1 - self.discounted_price / self.original_price))
-
-    @property
-    def key(self) -> str:
-        """Identifies this exact offer."""
-        return "|".join([
-            self.store.chain, self.store.store_id, self.product_id,
-            f"{self.discounted_price:.2f}", self.valid_until,
-        ])
