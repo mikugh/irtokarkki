@@ -1,6 +1,6 @@
 """Web UI: the owner's shopping list and which of it is on sale in their favourite S-group stores.
 
-Run with:  python -m irtokarkki.web   and open http://localhost:5000
+Run with:  python -m tarjoushaukka.web   and open http://localhost:5000
 
 The list and favourite stores are kept on the server (see storage.py), so they're the same on
 every device.
@@ -22,13 +22,13 @@ from .models import Deal, Store
 from .storage import StorageNotConfigured, load_storage
 
 ACCESS_KEY_PATH = ROOT / "access_key.txt"
-KEY_COOKIE = "irtokarkki_key"
+KEY_COOKIE = "tarjoushaukka_key"
 
 
 def load_access_key() -> str:
-    """The secret that visitors need in their link, from IRTOKARKKI_ACCESS_KEY or access_key.txt.
+    """The secret that visitors need in their link, from TARJOUSHAUKKA_ACCESS_KEY or access_key.txt.
     Empty means anyone who can reach the server may use it."""
-    key = os.environ.get("IRTOKARKKI_ACCESS_KEY", "")
+    key = os.environ.get("TARJOUSHAUKKA_ACCESS_KEY", "")
     if not key and ACCESS_KEY_PATH.exists():
         key = ACCESS_KEY_PATH.read_text(encoding="utf-8")
     return key.strip()
@@ -43,11 +43,11 @@ ACCESS_KEY = load_access_key()
 PRODUCT_RESULTS = 20  # suggestions shown when adding a product
 
 LOCKED_PAGE = """<!doctype html><html lang="fi"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Irtokarkki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Tarjoushaukka</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f2f7;color:#2a1630;
 font:17px/1.5 system-ui,"Segoe UI",sans-serif;padding:24px}main{max-width:30em}h1{font-size:26px;margin:0 0 12px}
 p{margin:6px 0;color:#74627a}@media(prefers-color-scheme:dark){body{background:#1b1020;color:#f5edf6}p{color:#b5a4ba}}</style>
-</head><body><main><h1>Irtokarkki</h1>
+</head><body><main><h1>Tarjoushaukka</h1>
 <p>Pyydä henkilökohtainen linkki palvelun ylläpitäjältä.</p>
 <p>Be den som driver tjänsten om din personliga länk.</p>
 <p>Ask the person who runs this for your personal link.</p></main></body></html>"""
@@ -198,9 +198,9 @@ def store_search():
 
 
 def main() -> None:
-    host = os.environ.get("IRTOKARKKI_HOST", "127.0.0.1")
-    port = int(os.environ.get("IRTOKARKKI_PORT", "5000"))
-    print(f"Irtokarkki running at http://{'localhost' if host == '127.0.0.1' else host}:{port}")
+    host = os.environ.get("TARJOUSHAUKKA_HOST", "127.0.0.1")
+    port = int(os.environ.get("TARJOUSHAUKKA_PORT", "5000"))
+    print(f"Tarjoushaukka running at http://{'localhost' if host == '127.0.0.1' else host}:{port}")
     from waitress import serve
     serve(app, host=host, port=port, threads=8)
 

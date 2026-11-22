@@ -52,7 +52,7 @@ class FileStorage:
 
 
 class RedisStorage:
-    def __init__(self, url: str, token: str, prefix: str = "irtokarkki:"):
+    def __init__(self, url: str, token: str, prefix: str = "tarjoushaukka:"):
         self.url = url.rstrip("/")
         self._token = token
         self.prefix = prefix

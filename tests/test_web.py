@@ -1,10 +1,10 @@
 """The web API: the shopping list, favourite stores, sales, behind the access key."""
 import pytest
 
-from irtokarkki import shopping, web
-from irtokarkki.models import Deal, Store
-from irtokarkki.shopping import Sale
-from irtokarkki.storage import MemoryStorage, StorageNotConfigured
+from tarjoushaukka import shopping, web
+from tarjoushaukka.models import Deal, Store
+from tarjoushaukka.shopping import Sale
+from tarjoushaukka.storage import MemoryStorage, StorageNotConfigured
 
 HALINEN = {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen", "chain": "S-market",
            "location": "Turku"}
@@ -128,16 +128,16 @@ def test_link_with_access_key_lets_the_browser_in(client, monkeypatch):
     monkeypatch.setattr(web, "ACCESS_KEY", "s3cret-key")
     first = client.get("/?key=s3cret-key")
     assert first.status_code == 302 and first.headers["Location"] == "/"  # key removed from the address bar
-    assert "irtokarkki_key=s3cret-key" in first.headers["Set-Cookie"] and "HttpOnly" in first.headers["Set-Cookie"]
+    assert "tarjoushaukka_key=s3cret-key" in first.headers["Set-Cookie"] and "HttpOnly" in first.headers["Set-Cookie"]
     assert client.get("/").status_code == 200
     assert client.get("/api/list").status_code == 200
 
 
 def test_access_key_is_read_from_file(tmp_path, monkeypatch):
-    monkeypatch.delenv("IRTOKARKKI_ACCESS_KEY", raising=False)
+    monkeypatch.delenv("TARJOUSHAUKKA_ACCESS_KEY", raising=False)
     monkeypatch.setattr(web, "ACCESS_KEY_PATH", tmp_path / "access_key.txt")
     assert web.load_access_key() == ""
     (tmp_path / "access_key.txt").write_text("from-file\n", encoding="utf-8")
     assert web.load_access_key() == "from-file"
-    monkeypatch.setenv("IRTOKARKKI_ACCESS_KEY", "from-env")
+    monkeypatch.setenv("TARJOUSHAUKKA_ACCESS_KEY", "from-env")
     assert web.load_access_key() == "from-env"

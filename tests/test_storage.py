@@ -1,6 +1,6 @@
 import pytest
 
-from irtokarkki import storage
+from tarjoushaukka import storage
 
 
 class FakeResponse:
@@ -39,8 +39,8 @@ def test_redis_storage_speaks_upstash_rest(monkeypatch):
     r = storage.RedisStorage("https://x.upstash.io", "tok")
     r.set("stores", ["a"])
     assert r.get("stores") == ["a"]
-    assert sent[0] == ("https://x.upstash.io", ["SET", "irtokarkki:stores", '["a"]'], "Bearer tok")
-    assert sent[1][1] == ["GET", "irtokarkki:stores"]
+    assert sent[0] == ("https://x.upstash.io", ["SET", "tarjoushaukka:stores", '["a"]'], "Bearer tok")
+    assert sent[1][1] == ["GET", "tarjoushaukka:stores"]
 
 
 def test_redis_storage_missing_key_is_none(monkeypatch):

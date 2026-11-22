@@ -1,8 +1,8 @@
 """Check Finnish grocery stores for irtokarkki discounts and print them.
 
 Usage:
-    python -m irtokarkki                 # check once
-    python -m irtokarkki --watch 6       # check every 6 hours
+    python -m tarjoushaukka                 # check once
+    python -m tarjoushaukka --watch 6       # check every 6 hours
 """
 import argparse
 import sys

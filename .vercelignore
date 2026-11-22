@@ -1,4 +1,4 @@
-# Never upload secrets or local state to Vercel. Set the key as IRTOKARKKI_ACCESS_KEY instead.
+# Never upload secrets or local state to Vercel. Set the key as TARJOUSHAUKKA_ACCESS_KEY instead.
 access_key.txt
 favourites.json
 seen_deals.json

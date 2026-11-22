@@ -1,6 +1,6 @@
-from irtokarkki import sgroup
-from irtokarkki.core import matches
-from irtokarkki.models import Deal, Store
+from tarjoushaukka import sgroup
+from tarjoushaukka.core import matches
+from tarjoushaukka.models import Deal, Store
 
 STORE = Store(chain="S-market", store_id="1", name="S-market Testi", location="Turku", source="s_group")
 

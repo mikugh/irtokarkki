@@ -1,4 +1,4 @@
-# Irtokarkki
+# Tarjoushaukka
 
 Keeps a list of what you usually buy in S-group stores (Prisma, S-market, Sale, Alepa, ABC) and tells you which of it is on sale right now, on a web page. It doesn't send notifications: open the page to see what's on sale.
 
@@ -19,8 +19,8 @@ A list item is either:
 Requires Python 3.11 or newer.
 
 ```
-git clone https://github.com/mikugh/irtokarkki.git
-cd irtokarkki
+git clone https://github.com/mikugh/tarjoushaukka.git
+cd tarjoushaukka
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 ```
@@ -28,7 +28,7 @@ python -m venv .venv
 ## Web UI
 
 ```
-.venv\Scripts\python -m irtokarkki.web
+.venv\Scripts\python -m tarjoushaukka.web
 ```
 
 Then open http://localhost:5000. The page has three tabs:
@@ -49,9 +49,9 @@ Lock the app with an access key so only you can use it. Create one with
 .venv\Scripts\python -c "import secrets; open('access_key.txt', 'w').write(secrets.token_urlsafe(18))"
 ```
 
-and restart the web UI. (The key can also come from the `IRTOKARKKI_ACCESS_KEY` environment variable; `access_key.txt` is kept out of git.) Then open `https://<your address>/?key=<the key>` once on each device. The first visit stores the key in the browser, so after that the plain address and home-screen shortcuts work. Anyone without it only sees a page asking for the link.
+and restart the web UI. (The key can also come from the `TARJOUSHAUKKA_ACCESS_KEY` environment variable; `access_key.txt` is kept out of git.) Then open `https://<your address>/?key=<the key>` once on each device. The first visit stores the key in the browser, so after that the plain address and home-screen shortcuts work. Anyone without it only sees a page asking for the link.
 
-By default the server only listens on this computer; set `IRTOKARKKI_HOST=0.0.0.0` (and optionally `IRTOKARKKI_PORT`) to reach it from other devices on your home network.
+By default the server only listens on this computer; set `TARJOUSHAUKKA_HOST=0.0.0.0` (and optionally `TARJOUSHAUKKA_PORT`) to reach it from other devices on your home network.
 
 ### Vercel
 
@@ -59,9 +59,9 @@ Vercel runs the app for free (Hobby plan), with no computer of yours that needs 
 
 The first time:
 
-1. `npx vercel login`, then `npx vercel link --project irtokarkki`.
+1. `npx vercel login`, then `npx vercel link --project tarjoushaukka`.
 2. Add a free **Upstash Redis** database to the project from the Vercel Marketplace (`npx vercel integration add upstash`). It stores your list and stores. Without it, the app answers "Storage isn't connected".
-3. Add the access key as a production environment variable, read from the file so it doesn't end up in your shell history: `npx vercel env add IRTOKARKKI_ACCESS_KEY production --sensitive < access_key.txt`
+3. Add the access key as a production environment variable, read from the file so it doesn't end up in your shell history: `npx vercel env add TARJOUSHAUKKA_ACCESS_KEY production --sensitive < access_key.txt`
 4. Deploy with `npx vercel deploy --prod`.
 
 ## Command line
@@ -69,8 +69,8 @@ The first time:
 The command line tool is the original pick-and-mix checker. It doesn't use the shopping list: it searches the words in the `[search]` section of `config.toml` in your city's stores and favourites.
 
 ```
-.venv\Scripts\python -m irtokarkki            # check once and print the deals
-.venv\Scripts\python -m irtokarkki --watch 6  # keep running, check every 6 hours
+.venv\Scripts\python -m tarjoushaukka            # check once and print the deals
+.venv\Scripts\python -m tarjoushaukka --watch 6  # keep running, check every 6 hours
 ```
 
 Edit `config.toml` to choose your city (or specific stores) and search words. It prints a table of the deals found and the pick-and-mix offers in the flyers.

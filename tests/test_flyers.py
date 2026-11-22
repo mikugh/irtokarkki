@@ -1,5 +1,5 @@
-from irtokarkki import flyers
-from irtokarkki.flyers import Flyer
+from tarjoushaukka import flyers
+from tarjoushaukka.flyers import Flyer
 
 LIBRARY_HTML = """
 <div id="publications">
@@ -85,7 +85,7 @@ OFFER = flyers.FlyerOffer(FLYER, "5 90 Voim. la 21.11. Irto- makeiset kg", "5,90
 
 
 def test_offer_description_and_printed_line():
-    from irtokarkki.__main__ import flyer_line
+    from tarjoushaukka.__main__ import flyer_line
     assert OFFER.description == "Voim. la 21.11. Irto- makeiset kg"
     assert flyer_line(OFFER, "fi") == "TOK Prisma 18.–22.11.: Voim. la 21.11. Irto- makeiset kg 5,90 €"
     assert flyer_line(OFFER, "en") == "TOK Prisma 18.–22.11.: Voim. la 21.11. Irto- makeiset kg 5.90 €"

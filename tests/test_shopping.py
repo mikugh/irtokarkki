@@ -1,8 +1,8 @@
 import pytest
 
-from irtokarkki import flyers, sgroup, shopping
-from irtokarkki.flyers import Flyer, FlyerOffer
-from irtokarkki.models import Deal, Store
+from tarjoushaukka import flyers, sgroup, shopping
+from tarjoushaukka.flyers import Flyer, FlyerOffer
+from tarjoushaukka.models import Deal, Store
 
 HALINEN = Store(chain="S-market", store_id="603212622", name="S-market Halinen", location="Turku", source="s_group")
 JUHLA = "6411300000494"
