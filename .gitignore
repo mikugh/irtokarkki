@@ -10,3 +10,4 @@ access_key.txt
 .env*
 user_data.json
 ntfy_topic.txt
+.superpowers/

@@ -144,3 +144,13 @@ def test_access_key_is_read_from_file(tmp_path, monkeypatch):
     assert web.load_access_key() == "from-file"
     monkeypatch.setenv("TARJOUSHAUKKA_ACCESS_KEY", "from-env")
     assert web.load_access_key() == "from-env"
+
+
+def test_page_has_the_hawk_logo(client):
+    page = client.get("/").get_data(as_text=True)
+    logo = page[page.index('id="logo"'):page.index("</svg>", page.index('id="logo"'))]
+    assert 'class="hawk"' in logo and 'class="hawk-tag"' in logo
+    assert 'class="tag"' not in logo  # .tag is the sales list's price tag style, with its own clip shape
+    assert "<ellipse" not in logo and "<rect" not in logo  # the old candies are gone
+    icon = page[page.index('rel="icon"'):page.index('">', page.index('rel="icon"'))]
+    assert "scale(.88)" in icon and "rotate(-30)" in icon  # the tab icon is the hawk too
