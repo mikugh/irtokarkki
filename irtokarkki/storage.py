@@ -1,8 +1,8 @@
-"""Where the web app keeps the shopping list, favourite stores and what's been notified.
+"""Where the web app keeps the shopping list and favourite stores.
 
 On Vercel: an Upstash Redis database (added from the Vercel Marketplace), spoken to over its
 REST API. Locally: user_data.json in the project folder (kept out of git).
-Values are anything JSON can hold. Names in use: "list", "stores", "notified", "last_check".
+Values are anything JSON can hold. Names in use: "list", "stores".
 """
 import json
 import os

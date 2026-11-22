@@ -33,7 +33,7 @@ class Sale:
     place: str  # store name, or flyer title (which carries the flyer's dates)
     url: str
     until: str  # ISO date the sale ends, "" when unknown (flyers)
-    key: str  # identifies this exact sale, for "already notified"
+    key: str  # identifies this exact sale
 
 
 def parse_items(raw) -> list[dict]:

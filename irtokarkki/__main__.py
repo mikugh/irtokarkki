@@ -1,12 +1,10 @@
-"""Check Finnish grocery stores for irtokarkki discounts and notify about new ones.
+"""Check Finnish grocery stores for irtokarkki discounts and print them.
 
 Usage:
     python -m irtokarkki                 # check once
     python -m irtokarkki --watch 6       # check every 6 hours
-    python -m irtokarkki --no-notify     # just print the table
 """
 import argparse
-import json
 import sys
 import time
 from datetime import datetime
@@ -14,7 +12,7 @@ from pathlib import Path
 
 from tabulate import tabulate
 
-from . import flyers, i18n, notify
+from . import flyers, i18n
 from .core import ROOT, collect, load_config, load_favourites
 from .models import Deal
 
@@ -29,6 +27,11 @@ def print_table(deals: list[Deal], lang: str) -> None:
         i18n.date(d.valid_until, lang),
     ] for d in deals]
     print(tabulate(rows, headers=i18n.t(lang, "headers"), tablefmt="github"))
+
+
+def flyer_line(offer: flyers.FlyerOffer, lang: str) -> str:
+    price = f" {i18n.price(float(offer.price.replace(',', '.')), lang)}" if offer.price else ""
+    return f"{offer.flyer.title}: {offer.description}{price}"
 
 
 def check_flyers(config: dict, lang: str) -> list[flyers.FlyerOffer]:
@@ -46,55 +49,30 @@ def check_flyers(config: dict, lang: str) -> list[flyers.FlyerOffer]:
     if offers:
         print(i18n.t(lang, "flyers_title", source=library))
         for offer in offers:
-            print(f"  {notify.flyer_line(offer, lang)}  {offer.flyer.url}")
+            print(f"  {flyer_line(offer, lang)}  {offer.flyer.url}")
     else:
         print(i18n.t(lang, "flyers_none"))
     return offers
 
 
-def run_once(config: dict, send_notifications: bool) -> None:
-    state_path = ROOT / "seen_deals.json"
-    seen = set(json.loads(state_path.read_text())) if state_path.exists() else set()
-
+def run_once(config: dict) -> None:
     lang = config.get("language", "fi")
     print(f"[{datetime.now():%Y-%m-%d %H:%M}] {i18n.t(lang, 'checking')}")
-    favourites = load_favourites()
-    _, prices, _ = collect(config, favourites)
-    deals = [p for p in prices if p.is_discounted]
-    print_table(deals, lang)
-    flyer_offers = check_flyers(config, lang)
-
-    if not send_notifications:
-        return
-
-    new = [d for d in deals if d.key not in seen]
-    if favourites and config.get("notify", {}).get("only_favourites", True):
-        new = [d for d in new if d.store.key in favourites]
-    # Flyer offers apply to all of the cooperative's stores, so they're never filtered by favourites.
-    new_flyer = [o for o in flyer_offers if o.key not in seen]
-    if new or new_flyer:
-        notify_cfg = config.get("notify", {})
-        if notify_cfg.get("desktop", True):
-            notify.desktop(new, lang, new_flyer)
-        if notify_cfg.get("ntfy_topic"):
-            notify.ntfy(new, notify_cfg["ntfy_topic"], notify_cfg.get("ntfy_server", "https://ntfy.sh"), lang, new_flyer)
-        print(i18n.t(lang, "notified", n=len(new) + len(new_flyer)))
-
-    # Only remember currently active deals, so a deal that ends and comes back is notified again.
-    state_path.write_text(json.dumps(sorted([d.key for d in deals] + [o.key for o in flyer_offers]), indent=1))
+    _, prices, _ = collect(config, load_favourites())
+    print_table([p for p in prices if p.is_discounted], lang)
+    check_flyers(config, lang)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, default=ROOT / "config.toml")
     parser.add_argument("--watch", type=float, metavar="HOURS", help="keep running, checking every HOURS")
-    parser.add_argument("--no-notify", action="store_true", help="only print, don't send notifications")
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")  # Finnish letters in the Windows console
 
     config = load_config(args.config)
     while True:
-        run_once(config, send_notifications=not args.no_notify)
+        run_once(config)
         if not args.watch:
             break
         time.sleep(args.watch * 3600)

@@ -45,7 +45,7 @@ def test_redis_storage_speaks_upstash_rest(monkeypatch):
 
 def test_redis_storage_missing_key_is_none(monkeypatch):
     monkeypatch.setattr(storage.requests, "post", lambda url, json, headers, timeout: FakeResponse({"result": None}))
-    assert storage.RedisStorage("https://x.upstash.io", "tok").get("notified") is None
+    assert storage.RedisStorage("https://x.upstash.io", "tok").get("list") is None
 
 
 def test_load_storage_picks_backend(monkeypatch):

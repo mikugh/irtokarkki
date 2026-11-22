@@ -1,13 +1,10 @@
-"""Translations for the command line tool and notifications. The web UI has its own in static/index.html."""
+"""Translations for the command line tool. The web UI has its own in static/index.html."""
 LANGUAGES = ("fi", "sv", "en")
 
 STRINGS = {
     "fi": {
         "checking": "Etsitään irtokarkkitarjouksia...",
         "no_deals": "Irtokarkkitarjouksia ei löytynyt juuri nyt.",
-        "notified": "Ilmoitettu {n} uudesta tarjouksesta.",
-        "title_one": "Irtokarkkia tarjouksessa! (1 uusi tarjous)",
-        "title_many": "Irtokarkkia tarjouksessa! ({n} uutta tarjousta)",
         "headers": ["Ketju", "Kauppa", "Sijainti", "Tuote", "Normaalihinta", "Tarjoushinta", "Ale", "Voimassa"],
         "flyers_title": "Irtomakeiset tarjouslehdissä ({source}):",
         "flyers_none": "Ajankohtaisissa tarjouslehdissä ei ole irtomakeistarjouksia.",
@@ -16,9 +13,6 @@ STRINGS = {
     "sv": {
         "checking": "Söker erbjudanden på lösgodis...",
         "no_deals": "Inga erbjudanden på lösgodis just nu.",
-        "notified": "Meddelade om {n} nya erbjudanden.",
-        "title_one": "Lösgodis på rea! (1 nytt erbjudande)",
-        "title_many": "Lösgodis på rea! ({n} nya erbjudanden)",
         "headers": ["Kedja", "Butik", "Plats", "Produkt", "Ordinarie pris", "Erbjudande", "Rabatt", "Gäller till"],
         "flyers_title": "Lösgodis i reklambladen ({source}):",
         "flyers_none": "De aktuella reklambladen har inga erbjudanden på lösgodis.",
@@ -27,9 +21,6 @@ STRINGS = {
     "en": {
         "checking": "Checking for irtokarkki discounts...",
         "no_deals": "No irtokarkki discounts found right now.",
-        "notified": "Notified about {n} new deal(s).",
-        "title_one": "Irtokarkki on sale! (1 new deal)",
-        "title_many": "Irtokarkki on sale! ({n} new deals)",
         "headers": ["Chain", "Store", "Location", "Product", "Original", "Discounted", "Off", "Valid until"],
         "flyers_title": "Pick-and-mix in the flyers ({source}):",
         "flyers_none": "No pick-and-mix offers in the current flyers.",

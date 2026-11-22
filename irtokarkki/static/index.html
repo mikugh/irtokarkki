@@ -367,7 +367,7 @@ const STRINGS = {
     until: "Voimassa {date} asti", openFlyer: "Avaa lehti",
     noStoresYet: "Et ole vielä valinnut kauppoja. Merkitse kaupat, joissa käyt, tähdellä Kaupat-välilehdellä.",
     emptyList: "Listasi on tyhjä. Lisää tuotteita tai sanoja Lista-välilehdellä.",
-    noneOnSale: "Mikään listasi tuote ei ole nyt tarjouksessa {stores}. Puhelimeesi tulee viesti, kun jokin menee tarjoukseen.",
+    noneOnSale: "Mikään listasi tuote ei ole nyt tarjouksessa {stores}.",
     inStores: "suosikkikaupoissasi",
     addPlaceholder: "Lisää tuote tai sana…",
     addWord: "Lisää sana ”{w}”", addWordSub: "mikä tahansa tuote, jonka nimessä se on",
@@ -393,7 +393,7 @@ const STRINGS = {
     until: "Gäller till {date}", openFlyer: "Öppna bladet",
     noStoresYet: "Du har inte valt några butiker ännu. Stjärnmärk butikerna du handlar i under fliken Butiker.",
     emptyList: "Din lista är tom. Lägg till produkter eller ord under fliken Lista.",
-    noneOnSale: "Inget på din lista är på rea {stores} just nu. Du får ett meddelande på telefonen när något blir det.",
+    noneOnSale: "Inget på din lista är på rea {stores} just nu.",
     inStores: "i dina favoritbutiker",
     addPlaceholder: "Lägg till en produkt eller ett ord…",
     addWord: "Lägg till ordet ”{w}”", addWordSub: "vilken produkt som helst med det i namnet",
@@ -419,7 +419,7 @@ const STRINGS = {
     until: "Until {date}", openFlyer: "Open flyer",
     noStoresYet: "You haven't picked any stores yet. Star the stores you shop at in the Stores tab.",
     emptyList: "Your list is empty. Add products or words in the My list tab.",
-    noneOnSale: "Nothing on your list is on sale {stores} right now. Your phone gets a message when something is.",
+    noneOnSale: "Nothing on your list is on sale {stores} right now.",
     inStores: "in your favourite stores",
     addPlaceholder: "Add a product or a word…",
     addWord: "Add the word “{w}”", addWordSub: "any product with it in its name",
@@ -527,7 +527,7 @@ function save(url, field, body, apply) {
     if (seq === latestSave[url]) { apply(result[field]); render(); }  // an older answer must not undo a newer edit
   };
   saving = saving.then(run, run);
-  return saving;  // no check after an edit: the page checks when opened, on "Check now" and every morning
+  return saving;  // no check after an edit: the page checks when opened and on "Check now"
 }
 
 function saveList(next) {

@@ -42,7 +42,7 @@ class FlyerOffer:
 
     @property
     def key(self) -> str:
-        """Identifies this offer, so we only notify once."""
+        """Identifies this offer."""
         return f"flyer|{self.flyer.doc_id}|{self.text}"
 
 

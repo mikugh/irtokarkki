@@ -3,7 +3,7 @@
 Run with:  python -m irtokarkki.web   and open http://localhost:5000
 
 The list and favourite stores are kept on the server (see storage.py), so they're the same on
-every device. Vercel Cron calls /api/cron/daily once a morning to message new sales to the phone.
+every device.
 """
 import hashlib
 import hmac
@@ -16,7 +16,7 @@ from datetime import datetime
 
 from flask import Flask, jsonify, redirect, request, send_from_directory
 
-from . import daily, sgroup, shopping
+from . import sgroup, shopping
 from .core import ROOT, load_config, search_stores
 from .models import Store
 from .storage import StorageNotConfigured, load_storage
@@ -40,7 +40,6 @@ MAX_AGE = web_cfg.get("cache_hours", 3) * 3600  # sales older than this are chec
 REFRESH_AGE = web_cfg.get("min_refresh_minutes", 15) * 60  # "Check" rechecks sales older than this
 LIBRARY = config.get("flyers", {}).get("library", "tok-ilmoitukset")
 ACCESS_KEY = load_access_key()
-CRON_PATH = "/api/cron/daily"
 
 LOCKED_PAGE = """<!doctype html><html lang="fi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Irtokarkki</title>
@@ -57,7 +56,7 @@ p{margin:6px 0;color:#74627a}@media(prefers-color-scheme:dark){body{background:#
 def require_access_key():
     """With an access key set, only visitors who arrived through the link with ?key=... get in.
     The key is then kept in a cookie, so the plain address and home-screen shortcuts keep working."""
-    if not ACCESS_KEY or request.path == CRON_PATH:  # Vercel Cron can't log in; it has CRON_SECRET instead
+    if not ACCESS_KEY:
         return None
     given = request.args.get("key")
     if given is not None and hmac.compare_digest(given.encode(), ACCESS_KEY.encode()):
@@ -192,16 +191,6 @@ def store_search():
         return jsonify([])
     favourite_keys = {s.key for s in _stores()}
     return jsonify([_store_json(s, s.key in favourite_keys) for s in search_stores(query)])
-
-
-@app.get(CRON_PATH)
-def cron_daily():
-    secret = os.environ.get("CRON_SECRET", "")
-    given = request.headers.get("Authorization", "")
-    if not secret or not hmac.compare_digest(given.encode(), f"Bearer {secret}".encode()):
-        return jsonify({"error": "unauthorized"}), 401
-    return jsonify(daily.run(get_storage(), os.environ.get("NTFY_TOPIC", ""),
-                             server=os.environ.get("NTFY_SERVER", "https://ntfy.sh"), library=LIBRARY))
 
 
 def main() -> None:

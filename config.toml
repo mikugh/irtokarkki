@@ -1,4 +1,4 @@
-# Language for the command line output and notifications: "fi", "sv" or "en".
+# Language for the command line output: "fi", "sv" or "en".
 # (The web UI has its own language switch.)
 language = "fi"
 
@@ -39,11 +39,3 @@ cache_hours = 3   # the web UI checks the flyer list again after this
 # so the stores' sites aren't asked again for every visitor.
 cache_hours = 3            # prices older than this are fetched again
 min_refresh_minutes = 15   # "Check for deals" only refetches prices older than this
-
-[notify]
-desktop = true
-# When you have favourite stores (in favourites.json, see the README), only notify about deals in those.
-only_favourites = true
-# Phone notifications: install the ntfy app, subscribe to a hard-to-guess topic
-# name and put it here. Leave empty to disable.
-ntfy_topic = ""

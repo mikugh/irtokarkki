@@ -1,4 +1,4 @@
-"""The web API: the shopping list, favourite stores, sales and the daily cron, behind the access key."""
+"""The web API: the shopping list, favourite stores, sales, behind the access key."""
 import pytest
 
 from irtokarkki import shopping, web
@@ -90,21 +90,6 @@ def test_product_search_uses_the_first_favourite(client, monkeypatch):
     assert found == [{"ean": "6411300000494", "name": "Juhla Mokka 500g", "price": 6.99, "regular_price": 8.89, "unit": "kpl"}]
     client.get("/api/products/search?q=juhla&store=999")
     assert seen == [("603212622", "juhla"), ("999", "juhla")]
-
-
-def test_cron_needs_the_secret_and_skips_the_access_key(client, monkeypatch):
-    calls = []
-    monkeypatch.setattr(web.daily, "run", lambda storage, topic, server, library: calls.append((topic, library)) or {"sent": False})
-    monkeypatch.setattr(web, "ACCESS_KEY", "s3cret-key")
-    monkeypatch.setenv("CRON_SECRET", "cron-s3cret")
-    monkeypatch.setenv("NTFY_TOPIC", "my-topic")
-    assert client.get("/api/cron/daily").status_code == 401
-    assert client.get("/api/cron/daily", headers={"Authorization": "Bearer wrong"}).status_code == 401
-    ok = client.get("/api/cron/daily", headers={"Authorization": "Bearer cron-s3cret"})
-    assert ok.status_code == 200 and calls == [("my-topic", web.config["flyers"]["library"])]
-    assert client.get("/api/list").status_code == 401  # everything else still needs the key
-    monkeypatch.delenv("CRON_SECRET")
-    assert client.get("/api/cron/daily", headers={"Authorization": "Bearer "}).status_code == 401
 
 
 def test_storage_not_connected_gives_503(client, monkeypatch):

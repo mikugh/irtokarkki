@@ -46,7 +46,7 @@ class Deal:
 
     @property
     def key(self) -> str:
-        """Identifies this exact offer, so we only notify once per offer."""
+        """Identifies this exact offer."""
         return "|".join([
             self.store.chain, self.store.store_id, self.product_id,
             f"{self.discounted_price:.2f}", self.valid_until,

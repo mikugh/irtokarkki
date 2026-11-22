@@ -84,13 +84,11 @@ def test_check_fetches_each_flyer_once(monkeypatch):
 OFFER = flyers.FlyerOffer(FLYER, "5 90 Voim. la 21.11. Irto- makeiset kg", "5,90")
 
 
-def test_offer_description_and_notification_line():
-    from irtokarkki import notify
+def test_offer_description_and_printed_line():
+    from irtokarkki.__main__ import flyer_line
     assert OFFER.description == "Voim. la 21.11. Irto- makeiset kg"
-    assert notify.flyer_line(OFFER, "fi") == "TOK Prisma 18.–22.11.: Voim. la 21.11. Irto- makeiset kg 5,90 €"
-    title, body = notify._summary([], "en", [OFFER])
-    assert title == "Irtokarkki on sale! (1 new deal)"
-    assert body == "TOK Prisma 18.–22.11.: Voim. la 21.11. Irto- makeiset kg 5.90 €"
+    assert flyer_line(OFFER, "fi") == "TOK Prisma 18.–22.11.: Voim. la 21.11. Irto- makeiset kg 5,90 €"
+    assert flyer_line(OFFER, "en") == "TOK Prisma 18.–22.11.: Voim. la 21.11. Irto- makeiset kg 5.90 €"
 
 
 def test_flyer_matches_ignores_case_hyphens_and_spaces():
