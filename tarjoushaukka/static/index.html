@@ -86,8 +86,8 @@
   /* Hero: the answer to "is anything I buy on sale?" */
   .hero { margin: 64px 0 0; }
   h1 {
-    margin: 0; max-width: 12ch;
-    font: 600 clamp(36px, 8vw, 60px)/1.02 var(--display); letter-spacing: -.035em;
+    margin: 0; max-width: 16ch;
+    font: 600 clamp(28px, 6vw, 44px)/1.05 var(--display); letter-spacing: -.03em;
     text-wrap: balance;
   }
   .status { margin: 16px 0 0; min-height: 24px; color: var(--muted); font-size: 16px; }
@@ -350,7 +350,6 @@
       </label>
       <div id="suggest"></div>
     </div>
-    <p class="quiet" data-i18n="addHint"></p>
     <div id="listItems"></div>
   </section>
 
@@ -367,9 +366,9 @@
 const STRINGS = {
   fi: {
     check: "Tarkista nyt", tabSales: "Tarjoukset", tabList: "Lista", tabStores: "Kaupat",
-    heroChecking: "Etsitään tarjouksia…", heroNone: "Listaltasi ei ole mitään tarjouksessa",
-    heroOne: "1 tarjous listaltasi", heroMany: "{n} tarjousta listaltasi", heroNoStores: "Valitse ensin kauppasi",
-    heroEmptyList: "Lisää listallesi ostoksia",
+    heroChecking: "Etsitään…", heroNone: "Ei tarjouksia",
+    heroOne: "1 tarjous", heroMany: "{n} tarjousta", heroNoStores: "Valitse kaupat",
+    heroEmptyList: "Lista on tyhjä",
     checking: "Tarkistetaan…", updated: "Tarkistettu {time}",
     error: "Kaikkea ei voitu tarkistaa: {e}",
     until: "Voimassa {date} asti", openFlyer: "Avaa lehti",
@@ -379,7 +378,6 @@ const STRINGS = {
     inStores: "suosikkikaupoissasi",
     addPlaceholder: "Lisää tuote tai sana…",
     addWord: "Lisää sana ”{w}”", addWordSub: "mikä tahansa tuote, jonka nimessä se on",
-    addHint: "Vinkki: kirjoita sanan alku: ”irtokark” löytää myös ”irtokarkit”. Tarkan tuotteen saat valitsemalla sen listasta.",
     tooShort: "Kirjoita vähintään 3 kirjainta.",
     pickStoreToSearch: "Tuotteita haetaan suosikkikauppasi valikoimasta. Valitse kauppa Kaupat-välilehdellä.",
     noProducts: "Tuotteita ei löytynyt.", searching: "Haetaan…",
@@ -394,9 +392,9 @@ const STRINGS = {
   },
   sv: {
     check: "Kontrollera nu", tabSales: "Erbjudanden", tabList: "Lista", tabStores: "Butiker",
-    heroChecking: "Söker erbjudanden…", heroNone: "Inget på din lista är på rea",
-    heroOne: "1 erbjudande från din lista", heroMany: "{n} erbjudanden från din lista", heroNoStores: "Välj dina butiker först",
-    heroEmptyList: "Lägg till varor på din lista",
+    heroChecking: "Söker…", heroNone: "Inga erbjudanden",
+    heroOne: "1 erbjudande", heroMany: "{n} erbjudanden", heroNoStores: "Välj butiker",
+    heroEmptyList: "Listan är tom",
     checking: "Kontrollerar…", updated: "Kontrollerat {time}",
     error: "Allt kunde inte kontrolleras: {e}",
     until: "Gäller till {date}", openFlyer: "Öppna bladet",
@@ -406,7 +404,6 @@ const STRINGS = {
     inStores: "i dina favoritbutiker",
     addPlaceholder: "Lägg till en produkt eller ett ord…",
     addWord: "Lägg till ordet ”{w}”", addWordSub: "vilken produkt som helst med det i namnet",
-    addHint: "Tips: skriv början av ordet: ”irtokark” hittar också ”irtokarkit”. Välj en produkt i listan för att lägga till just den.",
     tooShort: "Skriv minst 3 bokstäver.",
     pickStoreToSearch: "Produkter söks i din favoritbutiks sortiment. Välj en butik under fliken Butiker.",
     noProducts: "Inga produkter hittades.", searching: "Söker…",
@@ -421,9 +418,9 @@ const STRINGS = {
   },
   en: {
     check: "Check now", tabSales: "On sale", tabList: "My list", tabStores: "Stores",
-    heroChecking: "Looking for sales…", heroNone: "Nothing on your list is on sale",
-    heroOne: "1 thing on your list is on sale", heroMany: "{n} things on your list are on sale", heroNoStores: "Pick your stores first",
-    heroEmptyList: "Add what you buy to your list",
+    heroChecking: "Checking…", heroNone: "Nothing on sale",
+    heroOne: "1 on sale", heroMany: "{n} on sale", heroNoStores: "Pick your stores",
+    heroEmptyList: "Your list is empty",
     checking: "Checking…", updated: "Checked {time}",
     error: "Couldn't check everything: {e}",
     until: "Until {date}", openFlyer: "Open flyer",
@@ -433,7 +430,6 @@ const STRINGS = {
     inStores: "in your favourite stores",
     addPlaceholder: "Add a product or a word…",
     addWord: "Add the word “{w}”", addWordSub: "any product with it in its name",
-    addHint: "Tip: type the start of a word: “irtokark” also finds “irtokarkit”. Pick a product from the results to add exactly that one.",
     tooShort: "Type at least 3 letters.",
     pickStoreToSearch: "Products are searched in your favourite store's range. Pick a store in the Stores tab.",
     noProducts: "No products found.", searching: "Searching…",
@@ -637,9 +633,9 @@ function productPrice(it) {
 function renderList() {
   // Each row keeps its index in `items`, which the switch and ✕ buttons refer to.
   const indexed = items.map((it, i) => ({ it, i }));
-  const words = indexed.filter(({ it }) => it.type === "word");
-  const products = indexed.filter(({ it }) => it.type === "product")
-    .sort((a, b) => a.it.name.localeCompare(b.it.name, LOCALES[lang], { sensitivity: "base" }));
+  const byName = (key) => (a, b) => a.it[key].localeCompare(b.it[key], LOCALES[lang], { sensitivity: "base" });
+  const words = indexed.filter(({ it }) => it.type === "word").sort(byName("text"));
+  const products = indexed.filter(({ it }) => it.type === "product").sort(byName("name"));
   const removeBtn = (i) => `<div class="item-actions">
           <button class="remove" data-remove="${i}" title="${t("remove")}" aria-label="${t("remove")}">✕</button>
         </div>`;
