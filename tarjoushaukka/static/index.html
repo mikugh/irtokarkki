@@ -383,9 +383,10 @@ const STRINGS = {
     tooShort: "Kirjoita vähintään 3 kirjainta.",
     pickStoreToSearch: "Tuotteita haetaan suosikkikauppasi valikoimasta. Valitse kauppa Kaupat-välilehdellä.",
     noProducts: "Tuotteita ei löytynyt.", searching: "Haetaan…",
-    any: "mikä tahansa merkki", product: "tarkka tuote", flyers: "Myös lehdistä",
+    flyers: "Myös lehdistä",
     flyersHint: "Etsi myös tarjouslehdistä: tuotteille, joita ei myydä verkossa, kuten irtomakeisille.",
-    remove: "Poista", listTitle: "Listasi", listEmpty: "Lista on tyhjä.",
+    remove: "Poista", listEmpty: "Lista on tyhjä.",
+    listWords: "Hakusanat", listProducts: "Tuotteet", notSold: "Ei myynnissä suosikkikaupoissasi",
     storeSearch: "Etsi kauppaa nimellä tai kaupungilla, esim. ”Prisma Kaleva”", storeSearchLabel: "Etsi kauppoja",
     addFav: "Lisää suosikkeihin", removeFav: "Poista suosikeista", map: "Kartta",
     noStoresFound: "Kauppoja ei löytynyt.", favourites: "Suosikit",
@@ -409,9 +410,10 @@ const STRINGS = {
     tooShort: "Skriv minst 3 bokstäver.",
     pickStoreToSearch: "Produkter söks i din favoritbutiks sortiment. Välj en butik under fliken Butiker.",
     noProducts: "Inga produkter hittades.", searching: "Söker…",
-    any: "vilket märke som helst", product: "exakt produkt", flyers: "Även i bladen",
+    flyers: "Även i bladen",
     flyersHint: "Sök också i reklambladen: för sådant som inte säljs på nätet, som lösgodis.",
-    remove: "Ta bort", listTitle: "Din lista", listEmpty: "Listan är tom.",
+    remove: "Ta bort", listEmpty: "Listan är tom.",
+    listWords: "Sökord", listProducts: "Produkter", notSold: "Säljs inte i dina favoritbutiker",
     storeSearch: "Sök butik med namn eller stad, t.ex. ”Prisma Kaleva”", storeSearchLabel: "Sök butiker",
     addFav: "Lägg till bland favoriter", removeFav: "Ta bort från favoriter", map: "Karta",
     noStoresFound: "Inga butiker hittades.", favourites: "Favoriter",
@@ -435,9 +437,10 @@ const STRINGS = {
     tooShort: "Type at least 3 letters.",
     pickStoreToSearch: "Products are searched in your favourite store's range. Pick a store in the Stores tab.",
     noProducts: "No products found.", searching: "Searching…",
-    any: "any brand", product: "exact product", flyers: "Also in flyers",
+    flyers: "Also in flyers",
     flyersHint: "Also look in the flyers: for things not sold online, like pick-and-mix.",
-    remove: "Remove", listTitle: "Your list", listEmpty: "The list is empty.",
+    remove: "Remove", listEmpty: "The list is empty.",
+    listWords: "Search words", listProducts: "Products", notSold: "Not sold in your favourite stores",
     storeSearch: "Find any store by name or city, e.g. “Prisma Kaleva”", storeSearchLabel: "Search stores",
     addFav: "Add to favourites", removeFav: "Remove from favourites", map: "Map",
     noStoresFound: "No stores found.", favourites: "Favourites",
@@ -623,21 +626,47 @@ function renderSales() {
   $("salesView").innerHTML = html;
 }
 
+// The normal price under a product: its lowest regular price in the favourite stores, from the latest check.
+function productPrice(it) {
+  const prices = (sales && sales.prices) || {};
+  if (!(it.ean in prices)) return "";  // added since the last check: shown after the next one
+  const p = prices[it.ean];
+  return p ? `${euro(p.regular_price)} · ${esc(p.store)}` : t("notSold");
+}
+
 function renderList() {
-  const rows = items.map((it, i) => `
-      <div class="row">
-        <span class="item-kind" aria-hidden="true">${it.type === "word" ? "Aa" : "#"}</span>
-        <div class="store-info">
-          <div class="store-name">${esc(it.type === "word" ? it.text : it.name)}</div>
-          <div class="item-sub">${it.type === "word" ? t("any") : t("product")}</div>
-          ${it.type === "word" ? `<button class="switch" role="switch" data-flyers="${i}" aria-checked="${!!it.flyers}" title="${t("flyersHint")}"><span class="track" aria-hidden="true"></span>${t("flyers")}</button>` : ""}
-        </div>
-        <div class="item-actions">
+  // Each row keeps its index in `items`, which the switch and ✕ buttons refer to.
+  const indexed = items.map((it, i) => ({ it, i }));
+  const words = indexed.filter(({ it }) => it.type === "word");
+  const products = indexed.filter(({ it }) => it.type === "product")
+    .sort((a, b) => a.it.name.localeCompare(b.it.name, LOCALES[lang], { sensitivity: "base" }));
+  const removeBtn = (i) => `<div class="item-actions">
           <button class="remove" data-remove="${i}" title="${t("remove")}" aria-label="${t("remove")}">✕</button>
+        </div>`;
+  const wordRows = words.map(({ it, i }) => `
+      <div class="row">
+        <div class="store-info">
+          <div class="store-name">${esc(it.text)}</div>
+          <button class="switch" role="switch" data-flyers="${i}" aria-checked="${!!it.flyers}" title="${t("flyersHint")}"><span class="track" aria-hidden="true"></span>${t("flyers")}</button>
         </div>
+        ${removeBtn(i)}
       </div>`).join("");
-  $("listItems").innerHTML = `<h2>${t("listTitle")} <span class="h-count">${items.length}</span></h2>` +
-    (rows ? `<div class="panel">${rows}</div>` : `<p class="quiet">${t("listEmpty")}</p>`);
+  const productRows = products.map(({ it, i }) => {
+    const price = productPrice(it);
+    return `
+      <div class="row">
+        <div class="store-info">
+          <div class="store-name">${esc(it.name)}</div>
+          ${price ? `<div class="item-sub">${price}</div>` : ""}
+        </div>
+        ${removeBtn(i)}
+      </div>`;
+  }).join("");
+  const section = (title, list, rows) =>
+    `<h2>${t(title)} <span class="h-count">${list.length}</span></h2><div class="panel">${rows}</div>`;
+  $("listItems").innerHTML = !items.length ? `<p class="quiet">${t("listEmpty")}</p>`
+    : (words.length ? section("listWords", words, wordRows) : "")
+      + (products.length ? section("listProducts", products, productRows) : "");
 }
 
 function renderSuggest() {

@@ -114,6 +114,7 @@ class SalesCache:
         self._checked_at = 0.0
         self._sales: list[shopping.Sale] = []
         self._errors: list[str] = []
+        self._prices: dict = {}  # each exact product's lowest regular price, for the list view
         self.flyer_pages: dict = {}  # each flyer's text, kept: a published flyer doesn't change
 
     def get(self, items: list[dict], stores: list[Store], refresh: bool) -> dict:
@@ -121,11 +122,14 @@ class SalesCache:
         with self._lock:  # one request checks; others wait and share the result
             age = clock() - self._checked_at
             if fingerprint != self._fingerprint or age >= (REFRESH_AGE if refresh else MAX_AGE):
-                self._sales, self._errors = shopping.check_list(items, stores, LIBRARY, self.flyer_pages)
+                prices = {}
+                self._sales, self._errors = shopping.check_list(items, stores, LIBRARY, self.flyer_pages, prices=prices)
+                self._prices = prices
                 self._fingerprint, self._checked_at = fingerprint, clock()
             return {
                 "sales": [asdict(s) for s in self._sales],
                 "errors": self._errors,
+                "prices": self._prices,
                 "checked_at": datetime.fromtimestamp(self._checked_at).astimezone().isoformat(timespec="minutes"),
                 "items": len(items),
                 "stores": len(stores),

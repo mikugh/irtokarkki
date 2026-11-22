@@ -89,9 +89,11 @@ def _flyer_sale(word: str, offer: flyers.FlyerOffer) -> Sale:
 
 
 def check_list(items: list[dict], stores: list[Store], library: str,
-               flyer_pages: dict, budget: float = BUDGET) -> tuple[list[Sale], list[str]]:
+               flyer_pages: dict, budget: float = BUDGET, prices: dict | None = None) -> tuple[list[Sale], list[str]]:
     """Every item on the list that's on sale in `stores` or the flyers, and any error messages.
-    `flyer_pages` caches each flyer's text between checks (a published flyer doesn't change)."""
+    `flyer_pages` caches each flyer's text between checks (a published flyer doesn't change).
+    `prices`, when given, is filled with each exact product's lowest regular price and that store:
+    {ean: {"regular_price": 2.19, "store": "Prisma Itäharju"}}, or None when no store sells it."""
     deadline = time.monotonic() + budget
     products = [i for i in items if i["type"] == "product"]
     words = [i for i in items if i["type"] == "word"]
@@ -102,8 +104,14 @@ def check_list(items: list[dict], stores: list[Store], library: str,
     found_products: set[tuple[str, str]] = set()  # (EAN, store id) already shown under an exact product
     if products and stores:
         try:
-            for product, deal in _product_prices(products, stores, deadline):
+            found = _product_prices(products, stores, deadline)
+            if prices is not None:
+                prices.update({p["ean"]: None for p in products})
+            for product, deal in found:
                 found_products.add((deal.product_id, deal.store.store_id))
+                known = prices.get(product["ean"]) if prices is not None else None
+                if prices is not None and (known is None or deal.original_price < known["regular_price"]):
+                    prices[product["ean"]] = {"regular_price": deal.original_price, "store": deal.store.name}
                 if deal.is_discounted:
                     by_item.setdefault(items.index(product), []).append(_store_sale(product["name"], "product", deal))
         except Exception as e:

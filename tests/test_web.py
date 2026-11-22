@@ -15,8 +15,10 @@ class FakeCheck:
     def __init__(self):
         self.calls = 0
 
-    def __call__(self, items, stores, library, flyer_pages):
+    def __call__(self, items, stores, library, flyer_pages, prices=None):
         self.calls += 1
+        if prices is not None:
+            prices["6411300000494"] = {"regular_price": 8.89, "store": "S-market Halinen"}
         return [SALE], []
 
 
@@ -58,7 +60,8 @@ def test_sales_are_cached_until_list_or_stores_change(client, fake_check):
     first = client.post("/api/sales", json={}).json
     assert first["sales"][0]["product"] == "Kulta Katriina 500g" and first["errors"] == []
     assert first["items"] == len(shopping.DEFAULT_LIST) and first["stores"] == 1 and first["checked_at"]
-    client.post("/api/sales", json={})
+    assert first["prices"] == {"6411300000494": {"regular_price": 8.89, "store": "S-market Halinen"}}
+    assert client.post("/api/sales", json={}).json["prices"] == first["prices"]  # kept with the cached check
     assert fake_check.calls == 1
     client.put("/api/list", json={"items": [{"type": "word", "text": "maito"}]})
     client.post("/api/sales", json={})

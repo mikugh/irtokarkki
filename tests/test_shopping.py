@@ -123,6 +123,23 @@ def test_product_with_another_ean_in_another_store_is_found_by_its_exact_name(fa
         ("Prisma Itäharju", 0.79, f"https://www.s-kaupat.fi/tuote/{BROCCOLI_PRISMA}")]
 
 
+def test_check_list_reports_each_products_cheapest_regular_price(fakes):
+    fakes.catalog = [
+        Deal(HALINEN, BROCCOLI_SALE, "Coop pakattu parsakaali 300 g", 1.39, 1.39),
+        Deal(PRISMA, BROCCOLI_PRISMA, "Coop pakattu parsakaali 300 g", 0.99, 0.79, valid_until="2026-11-30"),
+        Deal(HALINEN, JUHLA, "Paulig Juhla Mokka kahvi 500g", 8.89, 6.99),
+    ]
+    items = [{"type": "product", "ean": BROCCOLI_SALE, "name": "Coop pakattu parsakaali 300 g"},
+             {"type": "product", "ean": JUHLA, "name": "Juhla Mokka 500g"},
+             {"type": "product", "ean": "6400000000000", "name": "Not sold anywhere"},
+             {"type": "word", "text": "kahvi", "flyers": False}]
+    prices = {}
+    shopping.check_list(items, [HALINEN, PRISMA], "tok-ilmoitukset", {}, prices=prices)
+    assert prices == {BROCCOLI_SALE: {"regular_price": 0.99, "store": "Prisma Itäharju"},
+                      JUHLA: {"regular_price": 8.89, "store": "S-market Halinen"},
+                      "6400000000000": None}  # checked, but none of the stores sells it
+
+
 def test_name_lookup_only_asks_stores_that_lack_the_ean(fakes, monkeypatch):
     asked = []
     monkeypatch.setattr(sgroup, "find_prices", lambda stores, term: asked.append([s.store_id for s in stores]) or [])
