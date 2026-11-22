@@ -102,12 +102,10 @@ def check_list(items: list[dict], stores: list[Store], library: str,
     found_products: set[tuple[str, str]] = set()  # (EAN, store id) already shown under an exact product
     if products and stores:
         try:
-            names = {p["ean"]: p["name"] for p in products}
-            for deal in sgroup.lookup_products(stores, list(names), deadline=deadline):
+            for product, deal in _product_prices(products, stores, deadline):
                 found_products.add((deal.product_id, deal.store.store_id))
                 if deal.is_discounted:
-                    by_item.setdefault(items.index(next(p for p in products if p["ean"] == deal.product_id)), []).append(
-                        _store_sale(names[deal.product_id], "product", deal))
+                    by_item.setdefault(items.index(product), []).append(_store_sale(product["name"], "product", deal))
         except Exception as e:
             errors.append(f"s_group: {e}")
             store_failed = True
@@ -142,6 +140,35 @@ def check_list(items: list[dict], stores: list[Store], library: str,
     for index in sorted(by_item):
         sales += sorted(by_item[index], key=lambda s: (s.price is None, s.price or 0, s.place))
     return sales, errors
+
+
+def same_name(a: str, b: str) -> bool:
+    return " ".join(a.lower().split()) == " ".join(b.lower().split())
+
+
+def _product_prices(products: list[dict], stores: list[Store], deadline: float) -> list[tuple[dict, Deal]]:
+    """Each exact product's price in each store that sells it.
+
+    Stores pack some products themselves (e.g. Coop vegetables), so the same product can have one
+    EAN in a Sale and another in a Prisma. A store that doesn't know the saved EAN is searched for
+    a product with exactly the saved name instead."""
+    by_ean = {p["ean"]: p for p in products}
+    pairs = [(by_ean[d.product_id], d) for d in sgroup.lookup_products(stores, list(by_ean), deadline=deadline)]
+    found = {(p["ean"], d.store.store_id) for p, d in pairs}
+    missing = [(p, [s for s in stores if (p["ean"], s.store_id) not in found]) for p in products]
+    missing = [(p, lacking) for p, lacking in missing if lacking]
+    if missing:
+        with ThreadPoolExecutor(4) as pool:
+            results = list(pool.map(lambda m: _search(m[1], m[0]["name"], deadline), missing))
+        for (product, _), (deals, error) in zip(missing, results):
+            if error:
+                raise RuntimeError(error)
+            seen_stores = set()
+            for deal in deals:
+                if same_name(deal.product, product["name"]) and deal.store.store_id not in seen_stores:
+                    seen_stores.add(deal.store.store_id)
+                    pairs.append((product, deal))
+    return pairs
 
 
 def _search(stores: list[Store], word: str, deadline: float) -> tuple[list[Deal], str]:

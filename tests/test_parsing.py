@@ -61,12 +61,12 @@ def test_lookup_products_uses_at_most_20_aliases_per_request(monkeypatch):
     assert calls == [20, 10]
 
 
-def test_search_products_returns_current_prices(monkeypatch):
+def test_find_prices_returns_current_prices(monkeypatch):
     items = [{"id": str(i), "name": f"kahvi {i}", "priceUnit": "KPL",
               "pricing": {"campaignPrice": None, "regularPrice": 5.0, "campaignPriceValidUntil": None}} for i in range(30)]
     monkeypatch.setattr(sgroup, "_post", lambda q, v=None, lang=None: {"s0": {"products": {"items": items}}})
-    found = sgroup.search_products(STORE, "kahvi", limit=20)
-    assert len(found) == 20 and found[0].product == "kahvi 0" and not found[0].is_discounted
+    found = sgroup.find_prices([STORE], "kahvi")
+    assert len(found) == 30 and found[0].product == "kahvi 0" and not found[0].is_discounted
 
 
 def test_lookup_products_stops_at_the_deadline(monkeypatch):

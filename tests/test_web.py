@@ -76,20 +76,33 @@ def test_refresh_rechecks_only_after_the_short_wait(client, fake_check, monkeypa
     assert fake_check.calls == 2
 
 
-def test_product_search_uses_the_first_favourite(client, monkeypatch):
+PRISMA = {"source": "s_group", "store_id": "590784583", "name": "Prisma Itäharju", "chain": "Prisma",
+          "location": "Turku"}
+
+
+def test_product_search_shows_the_cheapest_favourite_store(client, monkeypatch):
     seen = []
 
-    def fake_search(store, query, limit=20):
-        seen.append((store.store_id, query))
-        return [Deal(store, "6411300000494", "Juhla Mokka 500g", 8.89, 6.99)]
-    monkeypatch.setattr(web.sgroup, "search_products", fake_search)
-    assert client.get("/api/products/search?q=juhla").json == []  # no favourite stores yet
-    client.put("/api/favourites", json={"stores": [HALINEN]})
-    assert client.get("/api/products/search?q=j").json == []  # too short
-    found = client.get("/api/products/search?q=juhla").json
-    assert found == [{"ean": "6411300000494", "name": "Juhla Mokka 500g", "price": 6.99, "regular_price": 8.89, "unit": "kpl"}]
-    client.get("/api/products/search?q=juhla&store=999")
-    assert seen == [("603212622", "juhla"), ("999", "juhla")]
+    def fake_find(stores, query):
+        seen.append(([s.store_id for s in stores], query))
+        halinen, prisma = stores[0], stores[-1]
+        return [
+            Deal(halinen, "6414893386969", "Kotimaista maitorahka 250g rasvaton laktoositon", 1.05, 1.05),
+            Deal(prisma, "6414893386969", "Kotimaista maitorahka 250g rasvaton laktoositon", 0.74, 0.74),
+            Deal(halinen, "6411300000494", "Juhla Mokka 500g", 8.89, 6.99),
+        ]
+    monkeypatch.setattr(web.sgroup, "find_prices", fake_find)
+    assert client.get("/api/products/search?q=rahka").json == []  # no favourite stores yet
+    client.put("/api/favourites", json={"stores": [HALINEN, PRISMA]})
+    assert client.get("/api/products/search?q=r").json == []  # too short
+    found = client.get("/api/products/search?q=rahka").json
+    assert seen == [(["603212622", "590784583"], "rahka")]
+    assert found == [
+        {"ean": "6414893386969", "name": "Kotimaista maitorahka 250g rasvaton laktoositon", "price": 0.74,
+         "regular_price": 0.74, "unit": "kpl", "store": "Prisma Itäharju"},
+        {"ean": "6411300000494", "name": "Juhla Mokka 500g", "price": 6.99, "regular_price": 8.89, "unit": "kpl",
+         "store": "S-market Halinen"},
+    ]
 
 
 def test_storage_not_connected_gives_503(client, monkeypatch):

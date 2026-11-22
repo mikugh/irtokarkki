@@ -161,11 +161,6 @@ def _find_prices_batch(stores: list[Store], term: str) -> list[Deal]:
     return deals
 
 
-def search_products(store: Store, query: str, limit: int = 20) -> list[Deal]:
-    """Products in one store's catalog matching `query`, with their current prices."""
-    return _find_prices_batch([store], query)[:limit]
-
-
 def lookup_products(stores: list[Store], eans: list[str], deadline: float | None = None) -> list[Deal]:
     """The current price of each product (by EAN) in each store that sells it."""
     pairs = [(store, ean) for store in stores for ean in eans]

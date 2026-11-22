@@ -646,7 +646,7 @@ function renderSuggest() {
   else if (!productResults.results.length) productRows = `<div class="row"><div class="item-sub">${t("noProducts")}</div></div>`;
   else productRows = productResults.results.map((p, i) => `
       <button class="row" data-add-product="${i}"><span class="item-kind" aria-hidden="true">#</span>
-        <div class="store-info"><div class="store-name">${esc(p.name)}</div></div>
+        <div class="store-info"><div class="store-name">${esc(p.name)}</div><div class="item-sub">${esc(p.store)}</div></div>
         <span class="pprice">${euro(p.price)}</span></button>`).join("");
   $("suggest").innerHTML = `<div class="panel suggest">${wordRow}${productRows}</div>`;
 }

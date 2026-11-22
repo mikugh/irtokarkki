@@ -105,6 +105,32 @@ def test_no_stores_still_checks_flyers(fakes):
     assert errors == [] and [s.item for s in sales] == ["irtomakeis"]
 
 
+PRISMA = Store(chain="Prisma", store_id="590784583", name="Prisma Itäharju", location="Turku", source="s_group")
+BROCCOLI_SALE, BROCCOLI_PRISMA = "6414894501118", "6414894500173"
+
+
+def test_product_with_another_ean_in_another_store_is_found_by_its_exact_name(fakes):
+    # Stores pack some products themselves, so the same product has a different EAN in each kind of store.
+    fakes.catalog = [
+        Deal(HALINEN, BROCCOLI_SALE, "Coop pakattu parsakaali 300 g", 1.39, 1.39),
+        Deal(PRISMA, BROCCOLI_PRISMA, "Coop pakattu  parsakaali 300 G", 0.99, 0.79, valid_until="2026-11-30"),
+        Deal(PRISMA, "6414890113711", "Coop pakattu parsakaali 300 g luomu", 1.59, 1.19),  # a different product
+    ]
+    item = [{"type": "product", "ean": BROCCOLI_SALE, "name": "Coop pakattu parsakaali 300 g"}]
+    sales, errors = shopping.check_list(item, [HALINEN, PRISMA], "tok-ilmoitukset", {})
+    assert errors == []
+    assert [(s.place, s.price, s.url) for s in sales] == [
+        ("Prisma Itäharju", 0.79, f"https://www.s-kaupat.fi/tuote/{BROCCOLI_PRISMA}")]
+
+
+def test_name_lookup_only_asks_stores_that_lack_the_ean(fakes, monkeypatch):
+    asked = []
+    monkeypatch.setattr(sgroup, "find_prices", lambda stores, term: asked.append([s.store_id for s in stores]) or [])
+    item = [{"type": "product", "ean": JUHLA, "name": "Paulig Juhla Mokka kahvi 500g"}]
+    shopping.check_list(item, [HALINEN, PRISMA], "tok-ilmoitukset", {})
+    assert asked == [[PRISMA.store_id]]
+
+
 def test_parse_stores_accepts_only_numeric_ids():
     good = {"source": "s_group", "store_id": "603212622", "name": "S-market Halinen"}
     bad = {"source": "s_group", "store_id": '1") { id } x: store(id: "2', "name": "x"}

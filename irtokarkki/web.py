@@ -18,7 +18,7 @@ from flask import Flask, jsonify, redirect, request, send_from_directory
 
 from . import sgroup, shopping
 from .core import ROOT, load_config, search_stores
-from .models import Store
+from .models import Deal, Store
 from .storage import StorageNotConfigured, load_storage
 
 ACCESS_KEY_PATH = ROOT / "access_key.txt"
@@ -40,6 +40,7 @@ MAX_AGE = web_cfg.get("cache_hours", 3) * 3600  # sales older than this are chec
 REFRESH_AGE = web_cfg.get("min_refresh_minutes", 15) * 60  # "Check" rechecks sales older than this
 LIBRARY = config.get("flyers", {}).get("library", "tok-ilmoitukset")
 ACCESS_KEY = load_access_key()
+PRODUCT_RESULTS = 20  # suggestions shown when adding a product
 
 LOCKED_PAGE = """<!doctype html><html lang="fi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Irtokarkki</title>
@@ -171,17 +172,20 @@ def get_sales():
 
 @app.get("/api/products/search")
 def product_search():
-    """Products to add to the list, from one favourite store's catalog (the API needs a store)."""
+    """Products to add to the list, from the favourite stores' catalogs (the API needs a store).
+    A product sold in several of them is shown once, with the cheapest store's price."""
     query = request.args.get("q", "").strip()[:60]
-    store_id = request.args.get("store", "").strip()
     stores = _stores()
-    if len(query) < 2 or not (stores or store_id):
+    if len(query) < 2 or not stores:
         return jsonify([])
-    store = next((s for s in stores if s.store_id == store_id), None) or (
-        Store("", store_id, "", "", source="s_group") if store_id.isdigit() else stores[0])
+    cheapest: dict[str, Deal] = {}  # by name: the same product can have another EAN in another store
+    for deal in sgroup.find_prices(stores, query):
+        name = " ".join(deal.product.lower().split())
+        if name not in cheapest or deal.discounted_price < cheapest[name].discounted_price:
+            cheapest[name] = deal
     return jsonify([{"ean": d.product_id, "name": d.product, "price": d.discounted_price,
-                     "regular_price": d.original_price, "unit": d.unit}
-                    for d in sgroup.search_products(store, query)])
+                     "regular_price": d.original_price, "unit": d.unit, "store": d.store.name}
+                    for d in list(cheapest.values())[:PRODUCT_RESULTS]])
 
 
 @app.get("/api/stores/search")
