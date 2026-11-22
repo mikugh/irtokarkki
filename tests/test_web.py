@@ -154,3 +154,15 @@ def test_page_has_the_hawk_logo(client):
     assert "<ellipse" not in logo and "<rect" not in logo  # the old candies are gone
     icon = page[page.index('rel="icon"'):page.index('">', page.index('rel="icon"'))]
     assert "scale(.88)" in icon and "rotate(-30)" in icon  # the tab icon is the hawk too
+
+
+def test_logo_tag_swings_in_and_sways_on_separate_elements(client):
+    # Sharing one element made each check's end replay the swing-in, with a blink.
+    page = client.get("/").get_data(as_text=True)
+    assert '<g class="hawk-tag-in"><g class="hawk-tag">' in page
+    css = page[page.index("<style>"):page.index("</style>")]
+    swing = css[css.index(".logo .hawk-tag-in {"):]
+    assert "swing-in" in swing[:swing.index("}")]
+    plain = css[css.index(".logo .hawk-tag {"):]
+    assert "animation" not in plain[:plain.index("}")]
+    assert ".logo .hawk-tag-in, .logo .hawk-tag, .logo.busy .hawk-tag" in css  # reduced motion covers both
