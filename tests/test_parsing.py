@@ -54,11 +54,12 @@ def test_lookup_products_batches_and_skips_missing(monkeypatch):
         (STORE, "6411300000494", 6.99, 8.89, "2026-11-24")]
 
 
-def test_lookup_products_uses_at_most_20_aliases_per_request(monkeypatch):
+def test_lookup_products_uses_at_most_8_aliases_per_request(monkeypatch):
+    # The API answers 500 to a request with 9 or more product lookups (checked 2026-11-22).
     calls = []
     monkeypatch.setattr(sgroup, "_post", lambda q, v=None, lang=None: calls.append(q.count("product(")) or {})
     sgroup.lookup_products([STORE, STORE2], [str(i).zfill(13) for i in range(15)])
-    assert calls == [20, 10]
+    assert calls == [8, 8, 8, 6]
 
 
 def test_find_prices_returns_current_prices(monkeypatch):

@@ -14,7 +14,7 @@ HEADERS = {
     "Origin": "https://www.s-kaupat.fi",
 }
 STORES_PER_REQUEST = 5
-PRODUCTS_PER_REQUEST = 20
+PRODUCTS_PER_REQUEST = 8  # the API answers 500 to 9 or more product lookups in one request
 BRAND_NAMES = {
     "prisma": "Prisma", "s-market": "S-market", "sale": "Sale",
     "alepa": "Alepa", "abc": "ABC", "food-market-herkku": "Food Market Herkku",
